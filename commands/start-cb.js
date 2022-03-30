@@ -2,6 +2,8 @@ const { SlashCommandBuilder } = require("@discordjs/builders");
 const mongoose = require("mongoose");
 const cbSchema = require("../schemas/cb-schema");
 const { Permissions } = require("discord.js");
+const { createCB } = require("../database/database");
+
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -11,6 +13,7 @@ module.exports = {
             option.setName("int")
                 .setDescription("Enter the CB number")
                 .setRequired(true)),
+                
     async execute(interaction) {
 
         if (!interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
@@ -30,15 +33,8 @@ module.exports = {
             } else if (clanBattle) {
                 await interaction.reply({ content: "CB already exists!", ephemeral: true });
             } else {
-                await new cbSchema({
-                    cbId: cbNumber,
-                    day: 1,
-                    IGN: "Charby",
-                    user: "deliberateEmbankment#6770",
-                    first: false,
-                    second: false,
-                    third: false,
-                }).save();
+                // creates the documents for the clan battle
+                createCB(cbNumber);
                 await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbNumber}!`);
             }
         });

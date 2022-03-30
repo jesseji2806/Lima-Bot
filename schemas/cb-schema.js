@@ -10,19 +10,15 @@ const reqString = {
     required: true
 };
 
-const reqBoolean = {
-    type: Boolean,
-    required: true
-};
 
 const schema = new mongoose.Schema({
     cbId: reqNumber,
     day: reqNumber,
     IGN: reqString,
-    user: reqString,
-    first: reqBoolean,
-    second: reqBoolean,
-    third: reqBoolean,
+    userID: String,
+    nbAcc: Number,
+    hitsDone: Number,
+
 });
 
 module.exports = mongoose.model("Aquarium", schema, "Aquarium");
