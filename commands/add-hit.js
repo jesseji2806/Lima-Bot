@@ -2,8 +2,7 @@ const { SlashCommandBuilder } = require("@discordjs/builders");
 const mongoose = require("mongoose");
 const cbSchema = require("../schemas/cb-schema");
 const { Permissions } = require("discord.js");
-const { getPlayers, cbAddHit } = require("../database/database");
-const listPlayers = getPlayers();
+const { idToIGN, IGNToId, cbAddHit } = require("../database/database");
 
 
 module.exports = {
@@ -22,35 +21,37 @@ module.exports = {
                 .addChoice("4", 4)
                 .addChoice("5", 5)),
 
-	async execute(interaction) {
+	async execute(...args) {
+
+        const interaction = args[0];
 
         // Setting the player to update
-        var playerHit = interaction.options.getString("player");
+        let playerHit = interaction.options.getString("player");
         if (!playerHit) {
             console.log("Setting command user as player to update.");
-            playerHit = listPlayers[1][interaction.user.id];
+            playerHit = idToIGN(interaction.user.id);
         }
         
         // Stop if the player is not valid
-        if ((!listPlayers[0][playerHit]) && !listPlayers[1][playerHit]) {
+        if ((!IGNToId(playerHit)) && !idToIGN(playerHit)) {
             console.log("Player is not valid.");
             await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
             return;
         }
 
         // Stop if trying to update someone else when not allowed
-        if ((listPlayers[0][playerHit] !== interaction.user.id) && !interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
+        if ((IGNToId(playerHit) !== interaction.user.id) && !interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
             await interaction.reply({ content: "You do not have permission to add others' hits.", ephemeral: true });
             return;
         }
 
         // Updating
-        cbSchema.findOne({ name: "AquariumStatus" }, async function (err, data) {
+        cbSchema.findOne({ IGN: "AquariumStatus" }, async function (err, data) {
             if (err) {
                 console.log("Error obtaining current CB status.");
             } else {
                 const hitCbId = data.cbId;
-                var hitDay = interaction.options.getInteger("day");
+                let hitDay = interaction.options.getInteger("day");
                 if (!hitDay) {
                     hitDay = data.day;
                 }

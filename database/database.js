@@ -4,24 +4,31 @@ const mongoose = require("mongoose");
 const fs = require("node:fs");
 const cbSchema = require("../schemas/cb-schema");
 
+// get list of players
+const data = fs.readFileSync("database/Aquarium.json");
+
+// parse JSON string to JSON object
+const databases = JSON.parse(data);
+const listPlayers = [{}, {}];
+databases.forEach(function (db) {
+    if (db.IGN !== "Aquarium" && db.IGN !== "AquariumStatus") {
+        listPlayers[0][db.IGN] = db.userID;
+        if (db.userID) {
+            listPlayers[1][db.userID] = db.IGN;
+        }
+    }
+});
+
 module.exports = {
     
-    // list of players in Aquarium
-    getPlayers: function() {
-        const data = fs.readFileSync("database/Aquarium.json");
+    // IGN => Discord id
+    IGNToId: function(IGN) {
+        return listPlayers[0][IGN];
+    },
 
-        // parse JSON string to JSON object
-        const databases = JSON.parse(data);
-        const listPlayers = [{}, {}];
-        databases.forEach(function (db) {
-            if (db.IGN !== "Aquarium" && db.IGN !== "AquariumStatus") {
-                listPlayers[0][db.IGN] = db.userID;
-                if (db.userID) {
-                    listPlayers[1][db.userID] = db.IGN;
-                }
-            }
-        });
-        return listPlayers;
+    // Discord id => IGN
+    idToIGN: function(id) {
+        return listPlayers[1][id];
     },
 
     // create CB documents
@@ -49,12 +56,14 @@ module.exports = {
                     }
                 });
 
+                // remove previous tracker if it exists
+                await cbSchema.deleteMany({ "IGN": "AquariumStatus" });
                 // set tracker
                 await new cbSchema({
                     cbId: cbId,
-                    day: 1,
+                    day: 0,
                     IGN: "AquariumStatus",
-                });
+                }).save();
             }
         
         });
@@ -63,26 +72,15 @@ module.exports = {
     // add hit to Hit List
     cbAddHit: async function (hitCbID, hitDay, hitIGN, callback) {
         // Find the document corresponding to the right CB, the right day and the right player name
-        cbSchema.findOne({ cbID: hitCbID, day: hitDay, IGN: hitIGN}, function (err, doc) {
-            if (err) {
-                console.log("An error has occured when attempting to find a document.");
-                callback(err);
-            } else {
-                if (doc.hitsDone >= (doc.nbAcc * 3)) {
-                    callback("All hits done");
-                } else {
-                    cbSchema.updateOne({ cbID: hitCbID, day: hitDay, IGN: hitIGN}, 
-                        { $inc: { hitsDone: 1 } }, function (err, doc) {
-                            if (err) {
-                                console.log("Error adding hit");
-                                callback(err);
-                            } else {
-                                console.log("Added hit");
-                                callback("Added hit");
-                            }
-                        });
-                    }
-                }
-        });
+        const doc = await cbSchema.findOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN });
+
+        if (doc.hitsDone >= (doc.nbAcc * 3)) {
+            callback("All hits done");
+        } else {
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: 1 } });
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: 1 } });
+            console.log("Added hit");
+            callback("Added hit");
+        }
     },
 }
