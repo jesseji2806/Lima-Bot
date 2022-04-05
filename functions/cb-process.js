@@ -38,9 +38,9 @@ async function setCollector (cbNumber, cbDay, channelId, client, ...args) {
         await message.edit({ embeds: [embed], components: [row] });
 
         // create a new collector
-        let collTime = 20 * 1000;
+        let collTime = 24 * 60 * 60 * 1000;
         if (cbDay == 5) {
-            collTime = 20 * 1000;
+            collTime = 19 * 60 * 60 * 1000;
         }
 
         const collector = channel.createMessageComponentCollector({ componentType: "BUTTON", time: collTime });
@@ -128,7 +128,7 @@ function tracker (message, client) {
         // await cbQueue.deleteMany(query);
 
         // recursively call the function to continue
-        setTimeout(checkForUpdate, 1000 * 20);
+        setTimeout(checkForUpdate, 1000 * 60);
     }
     // start
     checkForUpdate();
