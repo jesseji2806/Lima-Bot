@@ -47,12 +47,13 @@ async function setCollector (cbNumber, cbDay, channelId, client, ...args) {
 
         collector.on("collect", async function (i) {
             let playerHit = idToIGN(i.user.id);
+            await i.deferReply({ ephemeral: true });
             if (!playerHit) {
-                await i.deferReply({ content: "You are not in Aquarium!" });
+                await i.editReply({ content: "You are not in Aquarium!" });
                 return;
             }
             if (i.customId === "add-hit") {
-                await i.deferReply({ ephemeral: true });
+        
                 cbAddHit(cbNumber, cbDay, playerHit, async function(retval) {
                     if (retval === "Added hit") {
                         await i.editReply({ content: `Added hit to ${playerHit} on day ${cbDay}.` });

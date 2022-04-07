@@ -55,6 +55,11 @@ module.exports = {
                 if (!hitDay) {
                     hitDay = data.day;
                 }
+                if (hitDay === 0) {
+                    await interaction.reply({ content: "CB hasn't started yet!" });
+                    return;
+                }
+
                 cbAddHit(hitCbId, hitDay, playerHit, async function(retval) {
                     if (retval === "Added hit") {
                         await interaction.reply({ content: `Added hit to ${playerHit} on day ${hitDay}.`});
