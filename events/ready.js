@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
 const Database = process.env.DATABASE;
+const { restartProcess } = require("../functions/cb-process");
 
 module.exports = {
 	name: "ready",
@@ -16,6 +17,7 @@ module.exports = {
 			useUnifiedTopology: true,
 		}).then(() => {
 			console.log("The client is now connected to the database")
+			restartProcess(client);
 		}).catch((err) => {
 			console.log(err);
 		});
