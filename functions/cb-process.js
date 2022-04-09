@@ -71,12 +71,15 @@ function tracker(client) {
         // query for documents that have a time earlier than set
         const query = {
             date: {
-                $lte: moment().unix()
+                $lte: moment()
             }
         };
 
         // all documents that have a past time (in general, should only be 1 doc at most)
         const results = await cbQueue.find(query);
+        if (results.lenghth === 0) {
+            console.log("No updates");
+        }
 
         for (const post of results) {
             console.log("Starting collector");
@@ -170,18 +173,15 @@ module.exports = {
             const message = await channel.messages.fetch(messageId);
 
             // update message
-            let startDate = 0;
-            if (day === 0) {
-                startDate = date;
-            } else {
-                startDate = moment.unix(date).subtract(1, "d").unix();
-            }
-            console.log(startDate);
             // create an embed based on the cbId, the cbDay as well as the date
-            const embed = createEmbed(cbId, day, startDate);
-            // edit the embed
-            await message.edit({ embeds: [embed], components: [row] });
 
+            const embed = createEmbed(cbId, day, moment(date).unix());
+            // edit the embed
+            if (day === 0) {
+                await message.edit({ embeds: [embed], components: [] });
+            } else {
+                await message.edit({ embeds: [embed], components: [row] });
+            }
             // create a new collector
             collectors[channelId] = new cbCollector(cbId, day, channel, message);
             setCollector(collectors[channelId]);
@@ -213,7 +213,7 @@ module.exports = {
 
         // start day 0 queue
         await new cbQueue({
-            date: startDate.unix(),
+            date: startDate,
             cbId: cbNumber,
             day: 0,
             channelId: destId,
