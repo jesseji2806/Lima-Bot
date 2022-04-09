@@ -54,13 +54,19 @@ module.exports = {
             } else if (clanBattle) {
                 await interaction.reply({ content: "CB already exists!", ephemeral: true });
             } else {
-                // creates the documents for the clan battle
-                createCB(cbNumber);
-                console.log("Created CB");
-                await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbNumber}!`);
+                const isActive = cbSchema.exists({IGN: "AquariumStatus", cbDay: { $lte: 5 } });
 
-                dateParsed.utc().hour(13);
-                startProcess(interaction, cbNumber, dateParsed, client);
+                if (isActive) {
+                    await interaction.reply({ content: "CB currently active!", ephemeral: true });
+                } else {
+                    // creates the documents for the clan battle
+                    createCB(cbNumber);
+                    console.log("Created CB");
+                    await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbNumber}!`);
+
+                    dateParsed.utc().hour(13);
+                    startProcess(interaction, cbNumber, dateParsed, client);
+                }
             }
         });
     },

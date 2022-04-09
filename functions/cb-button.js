@@ -17,7 +17,7 @@ module.exports = {
             const embed = new MessageEmbed()
                         .setColor("#0099ff")
                         .setTitle(`CB ${cbId}`)
-                        .setDescription(`CB Planned for <t:${date}:F> <t:${date}:R>.`);
+                        .setDescription(`CB planned for <t:${date}:F> <t:${date}:R>.`);
             return embed;
         } else if (cbDay <= 5) {
             const embed = new MessageEmbed()
