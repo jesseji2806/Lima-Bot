@@ -56,6 +56,7 @@ module.exports = {
             } else {
                 // creates the documents for the clan battle
                 createCB(cbNumber);
+                console.log("Created CB");
                 await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbNumber}!`);
 
                 dateParsed.utc().hour(13);

@@ -13,6 +13,7 @@ module.exports = {
     createEmbed: function (cbId, cbDay, ...args) {
         if (cbDay == 0) {
             const date = args[0];
+            console.log(date);
             const embed = new MessageEmbed()
                         .setColor("#0099ff")
                         .setTitle(`CB ${cbId}`)

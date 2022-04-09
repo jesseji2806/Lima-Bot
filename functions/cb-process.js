@@ -147,7 +147,7 @@ module.exports = {
         // query for documents that have an active CB
         const query = {
             day: {
-                $gte: 1
+                $gte: 0
             }
         };
 
@@ -156,7 +156,7 @@ module.exports = {
 
         for (const post of results) {
             console.log("Starting collector");
-            const { cbId, day, channelId, messageId } = post;
+            const { date, cbId, day, channelId, messageId } = post;
 
             // create collector
             // check if collector already exists
@@ -164,10 +164,23 @@ module.exports = {
                 await collectors[channelId].stop();
             }
             // get cb destination channel
-            const channel = client.channels.cache.get(channelId);
+            const channel = await client.channels.cache.get(channelId);
 
             // get cb message
-            const message = channel.messages.cache.get(messageId);
+            const message = await channel.messages.fetch(messageId);
+
+            // update message
+            let startDate = 0;
+            if (day === 0) {
+                startDate = date;
+            } else {
+                startDate = moment.unix(date).subtract(1, "d").unix();
+            }
+            console.log(startDate);
+            // create an embed based on the cbId, the cbDay as well as the date
+            const embed = createEmbed(cbId, day, startDate);
+            // edit the embed
+            await message.edit({ embeds: [embed], components: [row] });
 
             // create a new collector
             collectors[channelId] = new cbCollector(cbId, day, channel, message);
@@ -183,11 +196,14 @@ module.exports = {
         const channel = client.channels.cache.get(destId);
 
         // create an embed based on the cbId, the cbDay as well as the date
-        const embed = createEmbed(cbNumber, 0, startDate);
+        const embed = createEmbed(cbNumber, 0, startDate.unix());
         const message = await channel.send({ embeds: [embed] });
 
+        console.log("Starting CB for: ");
+        console.log(startDate);
         // create collector
         // check if collector already exists
+        console.log("Starting collector");
         if (collectors[destId]) {
             await collectors[destId].stop();
         }
