@@ -24,7 +24,7 @@ module.exports = {
             const embed = new MessageEmbed()
                             .setColor("#0099ff")
                             .setTitle(`CB ${cbId}`)
-                            .setDescription(`Hit registration for day ${cbDay} of CB${cbID}.\nDay ends at <t:${date}:F> <t:${date}:R>.`);
+                            .setDescription(`Hit registration for day ${cbDay} of CB${cbId}.\nDay ends at <t:${date}:F> <t:${date}:R>.`);
             return embed;
         } else {
             const embed = new MessageEmbed()
