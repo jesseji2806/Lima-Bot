@@ -51,6 +51,11 @@ const embed = {
             "inline": true
         },
         {
+            "name": `CB ID`,
+            "value": `Number`,
+            "inline": true
+        },
+        {
             "name": `/find-unhit`,
             "value": `gets IGNs of all players who haven't done all their hits today.`
         },
