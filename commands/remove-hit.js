@@ -13,7 +13,7 @@ module.exports = {
                 .setDescription("Enter the player to remove hit from"))
         .addUserOption(option => 
             option.setName("player-mention")
-                .setDescription("Enter the player to add hit to using a mention"))
+                .setDescription("Enter the player to remove hits from using a mention"))
         .addIntegerOption(option =>
             option.setName("day")
                 .setDescription("Enter the day of the hit")

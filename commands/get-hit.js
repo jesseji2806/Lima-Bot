@@ -11,7 +11,7 @@ module.exports = {
                 .setDescription("Enter the player to find hits of"))
         .addUserOption(option => 
             option.setName("player-mention")
-                .setDescription("Enter the player to add hit to using a mention"))
+                .setDescription("Enter the player to find hits of using a mention"))
         .addIntegerOption(option =>
             option.setName("cb-id")
                 .setDescription("Enter the CB you want to look up")),

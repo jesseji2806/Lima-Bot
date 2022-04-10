@@ -94,6 +94,6 @@ module.exports = {
     async execute(...args) {
 
         const interaction = args[0];
-        await interaction.channel.send({ embeds: [embed] });
+        await interaction.reply({ embeds: [embed] });
     },
 }
