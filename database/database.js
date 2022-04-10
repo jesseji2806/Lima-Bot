@@ -12,9 +12,9 @@ const databases = JSON.parse(data);
 const listPlayers = [{}, {}];
 databases.forEach(function (db) {
     if (db.IGN !== "Aquarium" && db.IGN !== "AquariumStatus") {
-        listPlayers[0][db.IGN] = db.userID;
-        if (db.userID) {
-            listPlayers[1][db.userID] = db.IGN;
+        listPlayers[0][db.IGN] = db.userId;
+        if (db.userId) {
+            listPlayers[1][db.userId] = db.IGN;
         }
     }
 });
@@ -49,7 +49,7 @@ module.exports = {
                             cbId: cbId,
                             day: i,
                             IGN: db.IGN,
-                            userID: db.userID,
+                            userId: db.userId,
                             nbAcc: db.nbAcc,
                             hitsDone: 0,    
                         }).save();

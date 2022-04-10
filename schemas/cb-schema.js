@@ -15,7 +15,7 @@ const schema = new mongoose.Schema({
     cbId: reqNumber,
     day: reqNumber,
     IGN: reqString,
-    userID: String,
+    userId: String,
     nbAcc: Number,
     hitsDone: Number,
 

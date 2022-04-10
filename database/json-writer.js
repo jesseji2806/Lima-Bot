@@ -3,9 +3,9 @@
 const fs = require("node:fs");
 const readline = require("node:readline");
 
-function Player(IGN, userID, nbAcc) {
+function Player(IGN, userId, nbAcc) {
     this.IGN = IGN,
-    this.userID = userID,
+    this.userId = userId,
     this.nbAcc = nbAcc
 };
 
@@ -27,15 +27,15 @@ const question = prompt => {
 
         const IGNAnswer = await question("What is the IGN?\n");
         
-        const userIDAnswer = await question("What is their Discord ID?\n");
+        const userIdAnswer = await question("What is their Discord ID?\n");
 
         const nbAcc = parseInt(await question("How many accounts do they have?\n"));
         
-        const newPlayer = new Player(IGNAnswer, userIDAnswer, nbAcc);
+        const newPlayer = new Player(IGNAnswer, userIdAnswer, nbAcc);
 
         database.push(newPlayer);
 
-        console.log(`Added ${newPlayer.IGN} with Discord ID ${newPlayer.userID} with ${newPlayer.nbAcc} account(s)\n`);
+        console.log(`Added ${newPlayer.IGN} with Discord ID ${newPlayer.userId} with ${newPlayer.nbAcc} account(s)\n`);
     }
     rl.close()
     fs.writeFile('database/Aquarium.json', JSON.stringify(database, null, 4), (err) => {
