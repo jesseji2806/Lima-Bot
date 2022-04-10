@@ -42,9 +42,9 @@ module.exports = {
 
         let toReply = `Results for ${playerToFind} for CB${cbToFind}\n`;
         for (const post of results) {
-            const hitDay = post.day;
-            const dayResults = post.hitsDone;
-            toReply += `Day ${hitDay} : ${dayResults} out of 3 hits complete.\n`;
+            const { day, hitsDone, nbAcc} = post;
+            const maxHits = nbAcc * 3;
+            toReply += `Day ${day} : ${hitsDone} out of ${maxHits} hits complete.\n`;
         }
         await interaction.reply(toReply);
     },

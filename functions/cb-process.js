@@ -52,8 +52,9 @@ async function setCollector(newCollector) {
         }
     });
 
-    collector.on('end', collected => {
+    collector.on('end', (collected, reason) => {
         console.log(`Collected ${collected.size} interactions.`);
+        console.log(`Collector terminated for reason: ${reason}.`);
     });
 };
 
@@ -90,7 +91,7 @@ function tracker(client) {
             if (day < 4) {
                 // if not yet last day, add a new doc to the queue for the next day
                 console.log("Starting full day");
-                newDate = moment.unix(date).add(1, "d").unix();
+                newDate = moment(date).add(1, "d");
                 await new cbQueue({
                     date: newDate,
                     cbId: cbId,
@@ -101,7 +102,8 @@ function tracker(client) {
                 console.log("Added to queue");
             } else if (day === 4) {
                 // if last day, add a new doc to the queue for the last day that ends earlier
-                newDate = moment.unix(date).utc().add(1, "d").hour(8).unix();
+                console.log("Starting last day");
+                newDate = moment(date).utc().add(1, "d").hour(8);
                 await new cbQueue({
                     date: newDate,
                     cbId: cbId,
@@ -114,7 +116,7 @@ function tracker(client) {
             collectors[channelId].updateCollector();
             // update embed
             // create an embed based on the cbId and the cbDay
-            const embed = createEmbed(cbId, day, newDate);
+            const embed = createEmbed(cbId, day + 1, newDate.unix());
 
             // retrieve the message object
             const message = collectors[channelId].message;

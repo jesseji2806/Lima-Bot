@@ -16,8 +16,8 @@ const schema = new mongoose.Schema({
     day: reqNumber,
     IGN: reqString,
     userId: String,
-    nbAcc: Number,
-    hitsDone: Number,
+    nbAcc: reqNumber,
+    hitsDone: reqNumber,
 
 });
 

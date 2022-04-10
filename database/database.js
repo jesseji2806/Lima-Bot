@@ -63,6 +63,8 @@ module.exports = {
                     cbId: cbId,
                     day: 0,
                     IGN: "AquariumStatus",
+                    nbAcc: 30,
+                    hitsDone: 90,
                 }).save();
             }
         
@@ -81,6 +83,20 @@ module.exports = {
             await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: 1 } });
             console.log("Added hit");
             callback("Added hit");
+        }
+    },
+    // remove hit from Hit List
+    cbRemoveHit: async function (hitCbID, hitDay, hitIGN, callback) {
+        // Find the document corresponding to the right CB, the right day and the right player name
+        const doc = await cbSchema.findOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN });
+
+        if (doc.hitsDone === 0) {
+            callback("No hits to remove");
+        } else {
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: -1 } });
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: -1 } });
+            console.log("Removed hit");
+            callback("Removed hit");
         }
     },
 }

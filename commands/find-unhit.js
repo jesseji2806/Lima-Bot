@@ -17,10 +17,12 @@ module.exports = {
             return;
         }
 
-        const results = await cbSchema.find({ cbId: cbId, day: day, IGN: { $nin: ["Aquarium", "AquariumStatus"] }, 
-                                            $expr: { $lt: [ "$hitsDone", { $mult: [ "$nbAcc", 3] } ] } });
+        const results = await cbSchema.find(
+            { cbId: cbId , day: day, 
+            IGN: { $nin: [ "Aquarium", "AquariumStatus" ] }, 
+            $expr: { $lt: [ "$hitsDone", { $multiply: [ "$nbAcc", 3 ] } ] } });
 
-        let toReply = `Players who haven't done all hits on day ${day} for CB${cbId}`;
+        let toReply = `Players who haven't done all hits on day ${day} for CB${cbId}:\n`;
         for (const post of results) {
             const name = post.IGN;
             toReply += `${name}\n`;

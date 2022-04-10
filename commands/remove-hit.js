@@ -1,16 +1,16 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const cbSchema = require("../schemas/cb-schema");
 const { Permissions } = require("discord.js");
-const { idToIGN, IGNToId, cbAddHit } = require("../database/database");
+const { idToIGN, IGNToId, cbRemoveHit } = require("../database/database");
 
 
 module.exports = {
 	data: new SlashCommandBuilder()
-		.setName("add-hit")
-		.setDescription("Add a hit to the CB Hit List")
+		.setName("remove-hit")
+		.setDescription("Remove a hit from the CB Hit List")
         .addStringOption(option => 
             option.setName("player")
-                .setDescription("Enter the player to add hit to"))
+                .setDescription("Enter the player to remove hit from"))
         .addIntegerOption(option =>
             option.setName("day")
                 .setDescription("Enter the day of the hit")
@@ -40,7 +40,7 @@ module.exports = {
 
         // Stop if trying to update someone else when not allowed
         if ((IGNToId(playerHit) !== interaction.user.id) && !interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
-            await interaction.reply({ content: "You do not have permission to add others' hits.", ephemeral: true });
+            await interaction.reply({ content: "You do not have permission to remove others' hits.", ephemeral: true });
             return;
         }
 
@@ -59,12 +59,12 @@ module.exports = {
                     return;
                 }
 
-                cbAddHit(hitCbId, hitDay, playerHit, async function(retval) {
-                    if (retval === "Added hit") {
-                        await interaction.reply({ content: `Added hit to ${playerHit} on day ${hitDay}.`});
+                cbRemoveHit(hitCbId, hitDay, playerHit, async function(retval) {
+                    if (retval === "Removed hit") {
+                        await interaction.reply({ content: `Removed hit from ${playerHit} on day ${hitDay}.`});
                         return;
-                    } else if (retval === "All hits done") {
-                        await interaction.reply({ content: `Player has already hit all hits for day ${hitDay}.`});
+                    } else if (retval === "No hits to remove") {
+                        await interaction.reply({ content: `Player has no hits on day ${hitDay}.`});
                         return;
                     } else {
                         await interaction.reply({ content: "An error has occured while adding hit."});
