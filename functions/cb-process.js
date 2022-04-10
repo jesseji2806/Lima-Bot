@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const cbSchema = require("../schemas/cb-schema");
 const cbQueue = require("../schemas/cb-queue");
-const { idToIGN, cbAddHit } = require("../database/database");
+const { idToIGN, cbAddHit, cbRemoveHit } = require("../database/database");
 const { createEmbed, row } = require("../functions/cb-button");
 const moment = require("moment");
 
@@ -46,6 +46,19 @@ async function setCollector(newCollector) {
                     return;
                 } else {
                     await i.editReply({ content: "An error has occured while adding hit." });
+                    return;
+                }
+            });
+        } else if (i.customId === "remove-hit") {
+            cbRemoveHit(cbId, cbDay, playerHit, async function (retval) {
+                if (retval === "Removed hit") {
+                    await i.editReply({ content: `Removed hit from ${playerHit} on day ${hitDay}.`});
+                    return;
+                } else if (retval === "No hits to remove") {
+                    await i.editReply({ content: `Player has no hits on day ${hitDay}.`});
+                    return;
+                } else {
+                    await i.editReply({ content: "An error has occured while removing hit."});
                     return;
                 }
             });

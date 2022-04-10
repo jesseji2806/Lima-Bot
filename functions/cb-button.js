@@ -8,6 +8,10 @@ module.exports = {
                 .setCustomId("add-hit")
                 .setLabel("Add Hit")
                 .setStyle("PRIMARY"),
+            new MessageButton()
+                .setCustomId("remove-hit")
+                .setLabel("Remove Hit")
+                .setStyle("DANGER"),
         ),
     
     createEmbed: function (cbId, cbDay, ...args) {
