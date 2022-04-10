@@ -55,6 +55,7 @@ module.exports = {
                 await interaction.reply({ content: "CB already exists!", ephemeral: true });
             } else {
                 const isActive = cbSchema.exists({ IGN: "AquariumStatus", cbDay: { $lte: 5 } });
+                console.log(isActive);
 
                 if (isActive != null) {
                     await interaction.reply({ content: "CB currently active!", ephemeral: true });
