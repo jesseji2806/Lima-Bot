@@ -10,6 +10,11 @@ module.exports = {
 
         const interaction = args[0];
         
+        if (!interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
+            await interaction.reply({ content: "You do not have permission to use this command.", ephemeral: true });
+            return;
+        }
+
         const { cbId, day } = await cbSchema.findOne({ IGN: "AquariumStatus" });
 
         if (day === 0 || day === 6) {
