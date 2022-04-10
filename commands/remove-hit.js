@@ -67,7 +67,7 @@ module.exports = {
                         await interaction.reply({ content: `Player has no hits on day ${hitDay}.`});
                         return;
                     } else {
-                        await interaction.reply({ content: "An error has occured while adding hit."});
+                        await interaction.reply({ content: "An error has occured while removing hit."});
                         return;
                     }
                 });

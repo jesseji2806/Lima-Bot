@@ -11,6 +11,9 @@ module.exports = {
         .addStringOption(option => 
             option.setName("player")
                 .setDescription("Enter the player to add hit to"))
+        .addUserOption(option => 
+            option.setName("player-mention")
+                .setDescription("Enter the player to add hit to using a mention"))
         .addIntegerOption(option =>
             option.setName("day")
                 .setDescription("Enter the day of the hit")
@@ -26,6 +29,10 @@ module.exports = {
 
         // Setting the player to update
         let playerHit = interaction.options.getString("player");
+        const playerHitMention = interaction.options.getUser("playerMention").id;
+        if (playerHitMention) {
+            playerHit = playerHitMention;
+        }
         if (!playerHit) {
             console.log("Setting command user as player to update.");
             playerHit = idToIGN(interaction.user.id);
