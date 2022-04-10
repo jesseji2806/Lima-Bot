@@ -1,7 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const mongoose = require("mongoose");
 const cbSchema = require("../schemas/cb-schema");
-const { idToIGN, IGNToId, cbAddHit } = require("../database/database");
 
 module.exports = {
 	data: new SlashCommandBuilder()

@@ -1,9 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const mongoose = require("mongoose");
 const cbSchema = require("../schemas/cb-schema");
 const { Permissions } = require("discord.js");
-const { idToIGN, createCB, cbAddHit } = require("../database/database");
-const { createEmbed, row } = require("../functions/cb-button");
+const { createCB } = require("../database/database");
 const { startProcess } = require("../functions/cb-process");
 const moment = require("moment");
 
@@ -54,20 +52,19 @@ module.exports = {
             } else if (clanBattle) {
                 await interaction.reply({ content: "CB already exists!", ephemeral: true });
             } else {
-                const isActive = cbSchema.exists({ IGN: "AquariumStatus", cbDay: { $lte: 5 } });
-                console.log(isActive);
+                cbSchema.exists({ IGN: "AquariumStatus", cbDay: { $lte: 5 } }, async function(err, status) {
+                    if (status) {
+                        await interaction.reply({ content: "CB currently active!", ephemeral: true });
+                    } else {
+                        // creates the documents for the clan battle
+                        createCB(cbNumber);
+                        console.log("Created CB");
+                        await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbNumber}!`);
 
-                if (isActive != null) {
-                    await interaction.reply({ content: "CB currently active!", ephemeral: true });
-                } else {
-                    // creates the documents for the clan battle
-                    createCB(cbNumber);
-                    console.log("Created CB");
-                    await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbNumber}!`);
-
-                    dateParsed.utc().hour(13);
-                    startProcess(interaction, cbNumber, dateParsed, client);
-                }
+                        dateParsed.utc().hour(13);
+                        startProcess(interaction, cbNumber, dateParsed, client);
+                    }
+                });
             }
         });
     },
