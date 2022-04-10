@@ -114,7 +114,7 @@ function tracker(client) {
             collectors[channelId].updateCollector();
             // update embed
             // create an embed based on the cbId and the cbDay
-            const embed = createEmbed(cbNumber, cbDay, newDate);
+            const embed = createEmbed(cbId, day, newDate);
 
             // retrieve the message object
             const message = collectors[channelId].message;
