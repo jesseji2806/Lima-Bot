@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
+const { Permissions } = require("discord.js");
 const cbSchema = require("../schemas/cb-schema");
 
 module.exports = {
