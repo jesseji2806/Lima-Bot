@@ -52,10 +52,10 @@ async function setCollector(newCollector) {
         } else if (i.customId === "remove-hit") {
             cbRemoveHit(cbId, cbDay, playerHit, async function (retval) {
                 if (retval === "Removed hit") {
-                    await i.editReply({ content: `Removed hit from ${playerHit} on day ${hitDay}.`});
+                    await i.editReply({ content: `Removed hit from ${playerHit} on day ${cbDay}.`});
                     return;
                 } else if (retval === "No hits to remove") {
-                    await i.editReply({ content: `Player has no hits on day ${hitDay}.`});
+                    await i.editReply({ content: `Player has no hits on day ${cbDay}.`});
                     return;
                 } else {
                     await i.editReply({ content: "An error has occured while removing hit."});
