@@ -1,7 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const mongoose = require("mongoose");
 const cbSchema = require("../schemas/cb-schema");
-const { idToIGN, IGNToId, cbAddHit } = require("../database/database");
+const { idToIGN, IGNToId } = require("../database/database");
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -10,6 +9,9 @@ module.exports = {
         .addStringOption(option => 
             option.setName("player")
                 .setDescription("Enter the player to find hits of"))
+        .addUserOption(option => 
+            option.setName("player-mention")
+                .setDescription("Enter the player to add hit to using a mention"))
         .addIntegerOption(option =>
             option.setName("cb-id")
                 .setDescription("Enter the CB you want to look up")),
@@ -20,13 +22,22 @@ module.exports = {
 
         // Setting the player to update
         let playerToFind = interaction.options.getString("player");
+        const playerToFindMention = interaction.options.getUser("player-mention");
+        if (playerToFindMention) {
+            playerToFind = playerToFindMention.id;
+        }
         if (!playerToFind) {
             console.log("Setting command user as player to update.");
             playerToFind = idToIGN(interaction.user.id);
         }
+
+        // Convert to IGN if id
+        if (idToIGN(playerToFind)) {
+            playerToFind = idToIGN(playerToFind)
+        }
         
         // Stop if the player is not valid
-        if ((!IGNToId(playerToFind)) && !idToIGN(playerToFind)) {
+        if (!IGNToId(playerToFind)) {
             console.log("Player is not valid.");
             await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
             return;

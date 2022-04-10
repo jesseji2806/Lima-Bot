@@ -11,6 +11,9 @@ module.exports = {
         .addStringOption(option => 
             option.setName("player")
                 .setDescription("Enter the player to remove hit from"))
+        .addUserOption(option => 
+            option.setName("player-mention")
+                .setDescription("Enter the player to add hit to using a mention"))
         .addIntegerOption(option =>
             option.setName("day")
                 .setDescription("Enter the day of the hit")
@@ -26,13 +29,23 @@ module.exports = {
 
         // Setting the player to update
         let playerHit = interaction.options.getString("player");
+        const playerHitMention = interaction.options.getUser("player-mention");
+        if (playerHitMention) {
+            playerHit = playerHitMention.id;
+        }
+
         if (!playerHit) {
             console.log("Setting command user as player to update.");
             playerHit = idToIGN(interaction.user.id);
         }
+
+        // Convert to IGN if id
+        if (idToIGN(playerHit)) {
+            playerHit = idToIGN(playerHit)
+        }
         
         // Stop if the player is not valid
-        if ((!IGNToId(playerHit)) && !idToIGN(playerHit)) {
+        if (!IGNToId(playerHit)) {
             console.log("Player is not valid.");
             await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
             return;
