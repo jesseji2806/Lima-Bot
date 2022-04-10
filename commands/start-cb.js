@@ -54,9 +54,9 @@ module.exports = {
             } else if (clanBattle) {
                 await interaction.reply({ content: "CB already exists!", ephemeral: true });
             } else {
-                const isActive = cbSchema.exists({IGN: "AquariumStatus", cbDay: { $lte: 5 } });
+                const isActive = cbSchema.exists({ IGN: "AquariumStatus", cbDay: { $lte: 5 } });
 
-                if (isActive) {
+                if (isActive != null) {
                     await interaction.reply({ content: "CB currently active!", ephemeral: true });
                 } else {
                     // creates the documents for the clan battle
