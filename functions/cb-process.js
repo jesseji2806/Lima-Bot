@@ -85,7 +85,7 @@ function tracker(client) {
             console.log("Starting collector");
             const { date, cbId, day, channelId, messageId } = post;
 
-            let newDate = 0;
+            let newDate = moment();
             // update queue
             if (day < 4) {
                 // if not yet last day, add a new doc to the queue for the next day
