@@ -141,7 +141,7 @@ function tracker(client) {
                 // end of last day; CB ends
                 console.log("Ending CB");
                 collectors[channelId].stop();
-                collectors.delete(channelId);
+                delete collectors[channelId];
                 // edit the embed with empty components
                 await message.edit({ embeds: [embed], components: [] });
             } else {
