@@ -52,7 +52,7 @@ module.exports = {
             } else if (clanBattle) {
                 await interaction.reply({ content: "CB already exists!", ephemeral: true });
             } else {
-                cbSchema.exists({ IGN: "AquariumStatus", cbDay: { $lte: 5 } }, async function(err, status) {
+                cbSchema.exists({ IGN: "AquariumStatus", day: { $lte: 5 } }, async function(err, status) {
                     if (status) {
                         await interaction.reply({ content: "CB currently active!", ephemeral: true });
                     } else {
