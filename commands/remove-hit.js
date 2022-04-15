@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const cbSchema = require("../schemas/cb-schema");
 const { Permissions } = require("discord.js");
-const { idToIGN, IGNToId, cbRemoveHit } = require("../database/database");
+const { idToIGN, IGNToId, cbRemoveHit, isPlayer } = require("../database/database");
 
 
 module.exports = {
@@ -45,7 +45,7 @@ module.exports = {
         }
         
         // Stop if the player is not valid
-        if (!IGNToId(playerHit)) {
+        if (!isPlayer(playerHit)) {
             console.log("Player is not valid.");
             await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
             return;

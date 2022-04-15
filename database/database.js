@@ -20,7 +20,10 @@ databases.forEach(function (db) {
 });
 
 module.exports = {
-    
+    isPlayer: function(player) {
+        return listPlayers[0].keys().includes(player) || listPlayers[1].keys().includes(player);
+    },
+
     // IGN => Discord id
     IGNToId: function(IGN) {
         return listPlayers[0][IGN];
