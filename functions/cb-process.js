@@ -55,7 +55,7 @@ async function setCollector(newCollector) {
                     await i.editReply({ content: `Removed hit from ${playerHit} on day ${cbDay}.`});
                     return;
                 } else if (retval === "No hits to remove") {
-                    await i.editReply({ content: `Player has no hits on day ${cbDay}.`});
+                    await i.editReply({ content: `You have no hits on day ${cbDay}.`});
                     return;
                 } else {
                     await i.editReply({ content: "An error has occured while removing hit."});
@@ -91,7 +91,7 @@ function tracker(client) {
 
         // all documents that have a past time (in general, should only be 1 doc at most)
         const results = await cbQueue.find(query);
-        if (results.lenghth === 0) {
+        if (results.length === 0) {
             console.log("No updates");
         }
 
