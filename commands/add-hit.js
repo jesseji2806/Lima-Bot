@@ -67,7 +67,7 @@ module.exports = {
                 if (!hitDay) {
                     hitDay = data.day;
                 }
-                if (hitDay === 0) {
+                if (hitDay === 0 || hitDay === 6) {
                     await interaction.reply({ content: "CB hasn't started yet!" });
                     return;
                 }
