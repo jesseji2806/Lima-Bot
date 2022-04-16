@@ -68,7 +68,7 @@ module.exports = {
                     hitDay = data.day;
                 }
                 if (hitDay === 0 || hitDay === 6) {
-                    await interaction.reply({ content: "CB hasn't started yet!" });
+                    await interaction.reply({ content: "CB hasn't started yet!", ephemeral: true });
                     return;
                 }
 
