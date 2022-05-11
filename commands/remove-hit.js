@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const cbSchema = require("../schemas/cb-schema");
 const { Permissions } = require("discord.js");
-const { idToIGN, IGNToId, cbRemoveHit, isPlayer } = require("../database/database");
+const { idToIGN, IGNToId, hitsToPrint, cbRemoveHit, isPlayer } = require("../database/database");
 
 
 module.exports = {
@@ -21,11 +21,15 @@ module.exports = {
                 .addChoice("2", 2)
                 .addChoice("3", 3)
                 .addChoice("4", 4)
-                .addChoice("5", 5)),
+                .addChoice("5", 5))
+        .addIntegerOption(option =>
+            option.setName("hits")
+                .setDescription("Enter the number of hits to remove")),
 
 	async execute(...args) {
 
         const interaction = args[0];
+        const client = args[1];
 
         // Setting the player to update
         let playerHit = interaction.options.getString("player");
@@ -57,6 +61,13 @@ module.exports = {
             return;
         }
 
+        // Default to one hit if no hits specified
+        let hitsToRemove = interaction.options.getInteger("hits");
+        if (!hitsToRemove) {
+            console.log("Setting hits to add to 1");
+            hitsToRemove = 1;
+        }
+
         // Updating
         cbSchema.findOne({ IGN: "AquariumStatus" }, async function (err, data) {
             if (err) {
@@ -72,12 +83,20 @@ module.exports = {
                     return;
                 }
 
-                cbRemoveHit(hitCbId, hitDay, playerHit, async function(retval) {
-                    if (retval === "Removed hit") {
-                        await interaction.reply({ content: `Removed hit from ${playerHit} on day ${hitDay}.`});
+                cbRemoveHit(hitCbId, hitDay, playerHit, hitsToRemove, async function(retval) {
+                    if (Number.isInteger(retval)) {
+                        const printHits = hitsToPrint(hitsToRemove);
+                        const printRet = hitsToPrint(retval);
+                        await interaction.reply({ content: `Removed ${printHits} from ${playerHit} on day ${hitDay}.\nPlayer has ${printRet} on day ${hitDay}.` });
+                        
+                        // logging
+                        await client.channels.cache.get(data.logs).send({ "content": `(CB${hitCbId}) ${interaction.user.tag} removed ${printHits} from ${playerHit} on day ${hitDay}. Total: ${printRet}` });
                         return;
                     } else if (retval === "No hits to remove") {
                         await interaction.reply({ content: `Player has no hits on day ${hitDay}.`});
+                        return;
+                    } else if (retval === "Too many hits") {
+                        await interaction.reply({ content: "You are trying to remove too many hits at once.", ephemeral: true });
                         return;
                     } else {
                         await interaction.reply({ content: "An error has occured while removing hit."});

@@ -34,8 +34,19 @@ module.exports = {
         return listPlayers[1][id];
     },
 
+    // Hits number => Printable
+    hitsToPrint: function(nbHits) {
+        let printHits = nbHits.toString();
+        if (nbHits === 1) {
+            printHits += " hit";
+        } else {
+            printHits += " hits";
+        }
+        return printHits;
+    },
+
     // create CB documents
-    createCB: async function(cbId) {
+    createCB: async function(cbId, bossIds, logs) {
         fs.readFile("database/Aquarium.json", async function (err, data) {
 
             if (err) {
@@ -44,17 +55,18 @@ module.exports = {
         
                 // parse JSON string to JSON object
                 const databases = JSON.parse(data);
-        
+
                 // create CB documents for 5 days
-                databases.forEach(async db => {
+                databases.forEach(db => {
                     for (let i = 1; i <= 5; ++i) {
-                        await new cbSchema({
+                        new cbSchema({
                             cbId: cbId,
                             day: i,
                             IGN: db.IGN,
                             userId: db.userId,
                             nbAcc: db.nbAcc,
-                            hitsDone: 0,    
+                            hitsDone: 0,
+                            ping: true,    
                         }).save();
                     }
                 });
@@ -68,6 +80,10 @@ module.exports = {
                     IGN: "AquariumStatus",
                     nbAcc: 30,
                     hitsDone: 90,
+                    lap: 1,
+                    boss: 1,
+                    bossIds: bossIds,
+                    logs: logs
                 }).save();
             }
         
@@ -75,31 +91,50 @@ module.exports = {
     },
 
     // add hit to Hit List
-    cbAddHit: async function (hitCbID, hitDay, hitIGN, callback) {
+    cbAddHit: async function (hitCbID, hitDay, hitIGN, hitsToAdd, callback) {
         // Find the document corresponding to the right CB, the right day and the right player name
         const doc = await cbSchema.findOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN });
 
         if (doc.hitsDone >= (doc.nbAcc * 3)) {
             callback("All hits done");
+        } else if ((doc.hitsDone + hitsToAdd) > (doc.nbAcc * 3)) {
+            callback("Too many hits");
         } else {
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: 1 } });
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: 1 } });
-            console.log("Added hit");
-            callback("Added hit");
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: hitsToAdd } });
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: hitsToAdd } });
+            console.log(`Added ${hitsToAdd} hit(s) to ${hitIGN}`);
+            callback(doc.hitsDone + hitsToAdd);
         }
     },
     // remove hit from Hit List
-    cbRemoveHit: async function (hitCbID, hitDay, hitIGN, callback) {
+    cbRemoveHit: async function (hitCbID, hitDay, hitIGN, hitsToRemove, callback) {
         // Find the document corresponding to the right CB, the right day and the right player name
         const doc = await cbSchema.findOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN });
 
         if (doc.hitsDone === 0) {
             callback("No hits to remove");
+        } else if ((doc.hitsDone - hitsToRemove) < 0) {
+            callback("Too many hits");
         } else {
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: -1 } });
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: -1 } });
-            console.log("Removed hit");
-            callback("Removed hit");
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: (-1 * hitsToRemove) } });
+            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: (-1 * hitsToRemove) } });
+            console.log(`Removed ${hitsToRemove} hit(s) to ${hitIGN}`);
+            callback(doc.hitsDone - hitsToRemove);
         }
     },
+
+    // kill boss in boss tracker
+    cbKillBoss: async function (killCbId) {
+        const doc = await cbSchema.findOne({ "cbId": killCbId, "IGN": "AquariumStatus" });
+        let { lap, boss } = doc;
+        if (boss === 5) {
+            boss = 1;
+            ++lap;
+        } else {
+            ++boss;
+        }
+        await cbSchema.updateOne({ cbId: killCbId, "IGN": "AquariumStatus"}, { $set: { lap: lap, boss: boss } });
+        console.log("Killed Boss");
+        return;
+    }
 }

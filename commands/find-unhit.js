@@ -20,7 +20,9 @@ module.exports = {
         const results = await cbSchema.find(
             { cbId: cbId , day: day, 
             IGN: { $nin: [ "Aquarium", "AquariumStatus" ] }, 
-            $expr: { $lt: [ "$hitsDone", { $multiply: [ "$nbAcc", 3 ] } ] } });
+            $expr: { $lt: [ "$hitsDone", { $multiply: [ "$nbAcc", 3 ] } ] } },
+            null, 
+            { sort: { "_id": 1 } });
 
         let toReply = `Players who haven't done all hits on day ${day} for CB${cbId}:\n`;
         for (const post of results) {

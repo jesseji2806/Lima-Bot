@@ -1,21 +1,22 @@
 const mongoose = require("mongoose");
 const cbSchema = require("../schemas/cb-schema");
 const cbQueue = require("../schemas/cb-queue");
-const { idToIGN, cbAddHit, cbRemoveHit } = require("../database/database");
-const { createEmbed, row } = require("../functions/cb-button");
+const { idToIGN, hitsToPrint, cbAddHit, cbRemoveHit, cbKillBoss } = require("../database/database");
+const { createEmbed, AddRow, BossRow, RemoveRow, LinkRow } = require("../functions/cb-button");
 const moment = require("moment");
 
 class cbCollector {
-    constructor(cbNumber, cbDay, channel, message) {
+    constructor(cbNumber, cbDay, channel, message, logs) {
         this.collector = channel.createMessageComponentCollector({ componentType: "BUTTON" });
         this.cbId = cbNumber;
         this.cbDay = cbDay;
         this.channel = channel;
         this.message = message;
+        this.logs = logs;
         
     }
     async stop() {
-        await this.collector.stop();
+        await this.collector.stop("cb stopped");
     }
     updateCollector() {
         this.cbDay += 1;
@@ -23,6 +24,53 @@ class cbCollector {
 }
 
 const collectors = {};
+
+function collectorFunc(i, type, collector, playerHit, nbHits) {
+    let { cbId, cbDay, logs } = collector;
+    if (type === "add") {
+        cbAddHit(cbId, cbDay, playerHit, nbHits, async function(retval) {
+            if (Number.isInteger(retval)) {
+                const printHits = hitsToPrint(nbHits);
+                const printRet = hitsToPrint(retval);
+                await i.editReply({ content: `Added ${printHits} to ${playerHit} on day ${cbDay}.\nYou have ${printRet} on day ${cbDay}.`});
+                
+                // logging
+                await logs.send({ "content": `(CB${cbId}) ${i.user.tag} added ${printHits} to ${playerHit} on day ${cbDay}. Total: ${printRet}` });
+                return;
+            } else if (retval === "All hits done") {
+                await i.editReply({ content: `Player has already hit all hits for day ${cbDay}.`});
+                return;
+            } else if (retval === "Too many hits") {
+                await i.editReply({ content: "You are trying to add too many hits at once."});
+                return;
+            } else {
+                await i.editReply({ content: "An error has occured while adding hit."});
+                return;
+            }
+        });
+    } else if (type === "remove") {
+        cbRemoveHit(cbId, cbDay, playerHit, nbHits, async function(retval) {
+            if (Number.isInteger(retval)) {
+                const printHits = hitsToPrint(nbHits);
+                const printRet = hitsToPrint(retval);
+                await i.editReply({ content: `Removed ${printHits} from ${playerHit} on day ${cbDay}.\nYou have ${printRet} on day ${cbDay}.`});
+                
+                // logging
+                await logs.send({ "content": `(CB${cbId}) ${i.user.tag} removed ${printHits} from ${playerHit} on day ${cbDay}. Total: ${printRet}` });
+                return;
+            } else if (retval === "No hits to remove") {
+                await i.editReply({ content: `Player has no hits on day ${cbDay}.`});
+                return;
+            } else if (retval === "Too many hits") {
+                await i.editReply({ content: "You are trying to remove too many hits at once." });
+                return;
+            } else {
+                await i.editReply({ content: "An error has occured while removing hit."});
+                return;
+            }
+        });
+    }
+}
 
 async function setCollector(newCollector) {
 
@@ -36,32 +84,44 @@ async function setCollector(newCollector) {
             await i.editReply({ content: "You are not in Aquarium!" });
             return;
         }
-        if (i.customId === "add-hit") {
-            cbAddHit(cbId, cbDay, playerHit, async function (retval) {
-                if (retval === "Added hit") {
-                    await i.editReply({ content: `Added hit to ${playerHit} on day ${cbDay}.` });
-                    return;
-                } else if (retval === "All hits done") {
-                    await i.editReply({ content: `You have already hit all hits for day ${cbDay}.` });
-                    return;
-                } else {
-                    await i.editReply({ content: "An error has occured while adding hit." });
-                    return;
-                }
-            });
-        } else if (i.customId === "remove-hit") {
-            cbRemoveHit(cbId, cbDay, playerHit, async function (retval) {
-                if (retval === "Removed hit") {
-                    await i.editReply({ content: `Removed hit from ${playerHit} on day ${cbDay}.`});
-                    return;
-                } else if (retval === "No hits to remove") {
-                    await i.editReply({ content: `You have no hits on day ${cbDay}.`});
-                    return;
-                } else {
-                    await i.editReply({ content: "An error has occured while removing hit."});
-                    return;
-                }
-            });
+        // adding hits
+        if (i.customId === "add-hit-1") {
+            collectorFunc(i, "add", newCollector, playerHit, 1);
+        } else if (i.customId === "add-hit-2") {
+            collectorFunc(i, "add", newCollector, playerHit, 2);
+        } else if (i.customId === "add-hit-all") {
+            const player = await cbSchema.findOne({ cbId: cbId, day: cbDay, IGN: playerHit });
+            const hitsToAdd = (player.nbAcc * 3) - player.hitsDone;
+            collectorFunc(i, "add", newCollector, playerHit, hitsToAdd);
+        } 
+        // removing hits
+        else if (i.customId === "remove-hit-1") {
+            collectorFunc(i, "remove", newCollector, playerHit, 1);
+        } else if (i.customId === "remove-hit-2") {
+            collectorFunc(i, "remove", newCollector, playerHit, 2);
+        } else if (i.customId === "remove-hit-all") {
+            const player = await cbSchema.findOne({ cbId: cbId, day: cbDay, IGN: playerHit });
+            const hitsToRemove = player.hitsDone;
+            collectorFunc(i, "remove", newCollector, playerHit, hitsToRemove);
+        }
+        // killing boss
+        else if (i.customId === "boss-killed") {
+            cbKillBoss(cbId);
+            await i.editReply("Boss Kill registered. Good work!");
+            // updating message
+            // getting status and queue data
+            const statusData = await cbSchema.findOne({ "IGN": "AquariumStatus" });
+            const queueData = await cbQueue.findOne({ "cbId": cbId });
+            const { lap, boss, bossIds } = statusData;
+            const { date } = queueData;
+            // create an embed based on the cbId and the cnDday
+            const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
+
+            // edit the embed
+            await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+
+            // logging
+            await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} killed a boss. Moving to Lap ${lap}, Boss ${boss}. `});
         }
     });
 
@@ -75,7 +135,6 @@ async function setCollector(newCollector) {
 function tracker(client) {
     // recursive function for checking past queue
     const checkForUpdate = async function () {
-        console.log("Checking for update...");
 
         // check if query is empty
         if (await cbQueue.estimatedDocumentCount() === 0) {
@@ -91,13 +150,10 @@ function tracker(client) {
 
         // all documents that have a past time (in general, should only be 1 doc at most)
         const results = await cbQueue.find(query);
-        if (results.length === 0) {
-            console.log("No updates");
-        }
 
         for (const post of results) {
             console.log("Starting collector");
-            const { date, cbId, day, channelId, messageId } = post;
+            const { date, cbId, day, channelId, messageId, logsId } = post;
 
             let newDate = moment();
             // update queue
@@ -111,6 +167,7 @@ function tracker(client) {
                     day: (day + 1),
                     channelId: channelId,
                     messageId: messageId,
+                    logsId: logsId,
                 }).save();
                 console.log("Added to queue");
             } else if (day === 4) {
@@ -123,19 +180,20 @@ function tracker(client) {
                     day: (day + 1),
                     channelId: channelId,
                     messageId: messageId,
+                    logsId: logsId,
                 }).save();
             }
             // update collector
             collectors[channelId].updateCollector();
             // update embed
+            // get boss data and update status tracker
+            const status = await cbSchema.findOneAndUpdate({ "IGN": "AquariumStatus" }, { $inc: { day: 1 } });
+            const { lap, boss, bossIds } = status;
             // create an embed based on the cbId and the cbDay
-            const embed = createEmbed(cbId, day + 1, newDate.unix());
+            const embed = createEmbed(cbId, day + 1, newDate.unix(), lap, boss, bossIds);
 
             // retrieve the message object
             const message = collectors[channelId].message;
-
-            // update status tracker
-            await cbSchema.updateOne({ IGN: "AquariumStatus" }, { $inc: { day: 1 } });
 
             if (day === 5) {
                 // end of last day; CB ends
@@ -146,7 +204,7 @@ function tracker(client) {
                 await message.edit({ embeds: [embed], components: [] });
             } else {
                 // edit the embed
-                await message.edit({ embeds: [embed], components: [row] });
+                await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
             }
         }
 
@@ -175,7 +233,7 @@ module.exports = {
 
         for (const post of results) {
             console.log("Starting collector");
-            const { date, cbId, day, channelId, messageId } = post;
+            const { date, cbId, day, channelId, messageId, logsId } = post;
 
             // create collector
             // check if collector already exists
@@ -188,18 +246,28 @@ module.exports = {
             // get cb message
             const message = await channel.messages.fetch(messageId);
 
+            // get logs channel
+            const logs = await client.channels.cache.get(logsId);
+
             // update message
+
+            // get boss data
+            const status = await cbSchema.findOne({ "IGN": "AquariumStatus" });
+            if (!status) {
+                return;
+            }
+            const { lap, boss, bossIds } = status;
             // create an embed based on the cbId, the cbDay as well as the date
 
-            const embed = createEmbed(cbId, day, moment(date).unix());
+            const embed = createEmbed(cbId, day, moment(date).unix(), lap, boss, bossIds);
             // edit the embed
             if (day === 0) {
                 await message.edit({ embeds: [embed], components: [] });
             } else {
-                await message.edit({ embeds: [embed], components: [row] });
+                await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
             }
             // create a new collector
-            collectors[channelId] = new cbCollector(cbId, day, channel, message);
+            collectors[channelId] = new cbCollector(cbId, day, channel, message, logs);
             setCollector(collectors[channelId]);
         }
         // start tracker
@@ -208,9 +276,10 @@ module.exports = {
 
     startProcess: async function (interaction, cbNumber, startDate, client) {
         // get cb destination channel
-        const destId = interaction.options.getChannel("destination").id;
-        const channel = client.channels.cache.get(destId);
-
+        const logs = interaction.options.getChannel("logs");
+        const channel = interaction.options.getChannel("destination");
+        const destId = channel.id;
+        
         // create an embed based on the cbId, the cbDay as well as the date
         const embed = createEmbed(cbNumber, 0, startDate.unix());
         const message = await channel.send({ embeds: [embed] });
@@ -224,7 +293,7 @@ module.exports = {
             await collectors[destId].stop();
         }
         // create a new collector
-        collectors[destId] = new cbCollector(cbNumber, 0, channel, message);
+        collectors[destId] = new cbCollector(cbNumber, 0, channel, message, logs);
         setCollector(collectors[destId]);
 
         // start day 0 queue
@@ -234,6 +303,7 @@ module.exports = {
             day: 0,
             channelId: destId,
             messageId: message.id,
+            logsId: logs.id,
         }).save();
 
         // start tracker

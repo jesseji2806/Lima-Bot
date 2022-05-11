@@ -19,6 +19,7 @@ const queue = new mongoose.Schema({
     day: reqNumber,
     channelId: reqString,
     messageId: reqString,
+    logsId: reqString,
 });
 
 const name = "cb-queue";
