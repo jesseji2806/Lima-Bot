@@ -45,7 +45,11 @@ module.exports = {
                         new MessageButton()
                             .setLabel("Hit List")
                             .setStyle("LINK")
-                            .setURL(`https://aquarium-hitlist.herokuapp.com/hitlist/${cbId}`));
+                            .setURL(`https://aquarium-hitlist.herokuapp.com/hitlist/${cbId}`),
+                        new MessageButton()
+                            .setLabel("Auto Teams")
+                            .setStyle("LINK")
+                            .setURL(`https://s3-us-west-2.amazonaws.com/holatuwol/priconne/cb${cbId}.html`));
         return row;
     },
 
