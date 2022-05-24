@@ -23,6 +23,10 @@ module.exports = {
             option.setName("logs")
                 .setDescription("Enter logs channel")
                 .setRequired(true))
+        .addChannelOption(option =>
+            option.setName("coordination")
+                .setDescription("Enter coordination channel")
+                .setRequired(true))
         .addStringOption(option =>
             option.setName("start-date")
                 .setDescription("Enter the planned start date (DD-MM-YYYY)")

@@ -6,13 +6,15 @@ const { createEmbed, AddRow, BossRow, RemoveRow, LinkRow } = require("../functio
 const moment = require("moment");
 
 class cbCollector {
-    constructor(cbNumber, cbDay, channel, message, logs) {
+    constructor(cbNumber, cbDay, boss, channel, message, logs, coordination) {
         this.collector = channel.createMessageComponentCollector({ componentType: "BUTTON" });
         this.cbId = cbNumber;
         this.cbDay = cbDay;
+        this.boss = boss;
         this.channel = channel;
         this.message = message;
         this.logs = logs;
+        this.coordination = coordination;
         
     }
     async stop() {
@@ -26,9 +28,9 @@ class cbCollector {
 const collectors = {};
 
 function collectorFunc(i, type, collector, playerHit, nbHits) {
-    let { cbId, cbDay, logs } = collector;
+    let { cbId, cbDay, boss, logs } = collector;
     if (type === "add") {
-        cbAddHit(cbId, cbDay, playerHit, nbHits, async function(retval) {
+        cbAddHit(cbId, cbDay, playerHit, nbHits, boss, async function(retval) {
             if (Number.isInteger(retval)) {
                 const printHits = hitsToPrint(nbHits);
                 const printRet = hitsToPrint(retval);
@@ -106,7 +108,7 @@ async function setCollector(newCollector) {
         }
         // killing boss
         else if (i.customId === "boss-killed") {
-            cbKillBoss(cbId);
+            const toPing = await cbKillBoss(cbId);
             await i.editReply("Boss Kill registered. Good work!");
             // updating message
             // getting status and queue data
@@ -114,6 +116,10 @@ async function setCollector(newCollector) {
             const queueData = await cbQueue.findOne({ "cbId": cbId });
             const { lap, boss, bossIds } = statusData;
             const { date } = queueData;
+
+            // update collector
+            newCollector.boss = boss;
+            
             // create an embed based on the cbId and the cnDday
             const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
 
@@ -122,6 +128,19 @@ async function setCollector(newCollector) {
 
             // logging
             await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} killed a boss. Moving to Lap ${lap}, Boss ${boss}. `});
+
+            // pinging
+            if (toPing.length > 0) {
+                let coordPing = `Pinging players who wish to hit boss ${boss}:`;
+                for (const post of toPing) {
+                    const user = post.userId;
+                    if (user) {
+                        coordPing += `<@${user}>, `;
+                    }
+                }
+                coordPing += `boss ${boss} is up!`;
+                await newCollector.coordination.send({ "content": coordPing });
+            }
         }
     });
 
@@ -153,7 +172,7 @@ function tracker(client) {
 
         for (const post of results) {
             console.log("Starting collector");
-            const { date, cbId, day, channelId, messageId, logsId } = post;
+            const { date, cbId, day, channelId, messageId, logsId, coordinationId } = post;
 
             let newDate = moment();
             // update queue
@@ -168,6 +187,7 @@ function tracker(client) {
                     channelId: channelId,
                     messageId: messageId,
                     logsId: logsId,
+                    coordinationId: coordinationId,
                 }).save();
                 console.log("Added to queue");
             } else if (day === 4) {
@@ -181,6 +201,7 @@ function tracker(client) {
                     channelId: channelId,
                     messageId: messageId,
                     logsId: logsId,
+                    coordinationId: coordinationId,
                 }).save();
             }
             // update collector
@@ -233,7 +254,7 @@ module.exports = {
 
         for (const post of results) {
             console.log("Starting collector");
-            const { date, cbId, day, channelId, messageId, logsId } = post;
+            const { date, cbId, day, channelId, messageId, logsId, coordinationId } = post;
 
             // create collector
             // check if collector already exists
@@ -248,6 +269,9 @@ module.exports = {
 
             // get logs channel
             const logs = await client.channels.cache.get(logsId);
+
+            // get coordination channel
+            const coordination = await client.channels.cache.get(coordinationId);
 
             // update message
 
@@ -267,7 +291,7 @@ module.exports = {
                 await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
             }
             // create a new collector
-            collectors[channelId] = new cbCollector(cbId, day, channel, message, logs);
+            collectors[channelId] = new cbCollector(cbId, day, boss, channel, message, logs, coordination);
             setCollector(collectors[channelId]);
         }
         // start tracker
@@ -275,8 +299,9 @@ module.exports = {
     },
 
     startProcess: async function (interaction, cbNumber, startDate, client) {
-        // get cb destination channel
+        // get cb channels
         const logs = interaction.options.getChannel("logs");
+        const coordination = interaction.options.getChannel("coordination");
         const channel = interaction.options.getChannel("destination");
         const destId = channel.id;
         
@@ -293,7 +318,7 @@ module.exports = {
             await collectors[destId].stop();
         }
         // create a new collector
-        collectors[destId] = new cbCollector(cbNumber, 0, channel, message, logs);
+        collectors[destId] = new cbCollector(cbNumber, 0, 1, channel, message, logs, coordination);
         setCollector(collectors[destId]);
 
         // start day 0 queue
@@ -304,6 +329,7 @@ module.exports = {
             channelId: destId,
             messageId: message.id,
             logsId: logs.id,
+            coordinationId: coordination.id,
         }).save();
 
         // start tracker

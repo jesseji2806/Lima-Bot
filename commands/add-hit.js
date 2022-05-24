@@ -24,7 +24,15 @@ module.exports = {
                 .addChoice("5", 5))
         .addIntegerOption(option =>
             option.setName("hits")
-                .setDescription("Enter the number of hits to add")),
+                .setDescription("Enter the number of hits to add"))
+        .addIntegerOption(option =>
+            option.setName("boss")
+                .setDescription("Enter the boss hit")
+                .addChoice("1", 1)
+                .addChoice("2", 2)
+                .addChoice("3", 3)
+                .addChoice("4", 4)
+                .addChoice("5", 5)),
 
 	async execute(...args) {
 
@@ -73,24 +81,34 @@ module.exports = {
             if (err) {
                 console.log("Error obtaining current CB status.");
             } else {
-                const hitCbId = data.cbId;
+                const { cbId } = data;
+
+                // Setting hit day
                 let hitDay = interaction.options.getInteger("day");
                 if (!hitDay) {
                     hitDay = data.day;
                 }
+
+                // Setting boss hit
+                let hitBoss = interaction.options.getInteger("boss");
+                if (!hitBoss) {
+                    hitBoss = data.boss;
+                }
+
+                // Check if cb is active
                 if (hitDay === 0 || hitDay === 6) {
                     await interaction.reply({ content: "CB hasn't started yet!", ephemeral: true });
                     return;
                 }
 
-                cbAddHit(hitCbId, hitDay, playerHit, hitsToAdd, async function(retval) {
+                cbAddHit(cbId, hitDay, playerHit, hitsToAdd, hitBoss, async function(retval) {
                     if (Number.isInteger(retval)) {
                         const printHits = hitsToPrint(hitsToAdd);
                         const printRet = hitsToPrint(retval);
                         await interaction.reply({ content: `Added ${printHits} to ${playerHit} on day ${hitDay}.\nPlayer has ${printRet} on day ${hitDay}.`});
                         
                         // logging
-                        await client.channels.cache.get(data.logs).send({ "content": `(CB${hitCbId}) ${interaction.user.tag} added ${printHits} to ${playerHit} on day ${hitDay}. Total: ${printRet}` });
+                        await client.channels.cache.get(data.logs).send({ "content": `(CB${cbId}) ${interaction.user.tag} added ${printHits} to ${playerHit} on day ${hitDay}. Total: ${printRet}` });
                         return;
                     } else if (retval === "All hits done") {
                         await interaction.reply({ content: `Player has already hit all hits for day ${hitDay}.`});

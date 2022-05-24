@@ -2,6 +2,7 @@
 
 const mongoose = require("mongoose");
 const fs = require("node:fs");
+const { kill } = require("node:process");
 const cbSchema = require("../schemas/cb-schema");
 
 // get list of players
@@ -46,7 +47,7 @@ module.exports = {
     },
 
     // create CB documents
-    createCB: async function(cbId, bossIds, logs) {
+    createCB: async function(cbId, bossIds, logs, coordination) {
         fs.readFile("database/Aquarium.json", async function (err, data) {
 
             if (err) {
@@ -66,6 +67,7 @@ module.exports = {
                             userId: db.userId,
                             nbAcc: db.nbAcc,
                             hitsDone: 0,
+                            bossIds: [],
                             ping: true,    
                         }).save();
                     }
@@ -83,7 +85,7 @@ module.exports = {
                     lap: 1,
                     boss: 1,
                     bossIds: bossIds,
-                    logs: logs
+                    logs: logs,
                 }).save();
             }
         
@@ -91,7 +93,7 @@ module.exports = {
     },
 
     // add hit to Hit List
-    cbAddHit: async function (hitCbID, hitDay, hitIGN, hitsToAdd, callback) {
+    cbAddHit: async function (hitCbID, hitDay, hitIGN, hitsToAdd, bossId, callback) {
         // Find the document corresponding to the right CB, the right day and the right player name
         const doc = await cbSchema.findOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN });
 
@@ -100,8 +102,8 @@ module.exports = {
         } else if ((doc.hitsDone + hitsToAdd) > (doc.nbAcc * 3)) {
             callback("Too many hits");
         } else {
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: hitsToAdd } });
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: hitsToAdd } });
+            await cbSchema.updateOne({ "cbId": hitCbID, "day": hitDay, "IGN": hitIGN}, { $inc: { "hitsDone": hitsToAdd }, $pull: { "bossIds": bossId } });
+            await cbSchema.updateOne({ "cbId": hitCbID, "day": hitDay, "IGN": "Aquarium"}, { $inc: { "hitsDone": hitsToAdd } });
             console.log(`Added ${hitsToAdd} hit(s) to ${hitIGN}`);
             callback(doc.hitsDone + hitsToAdd);
         }
@@ -126,7 +128,7 @@ module.exports = {
     // kill boss in boss tracker
     cbKillBoss: async function (killCbId) {
         const doc = await cbSchema.findOne({ "cbId": killCbId, "IGN": "AquariumStatus" });
-        let { lap, boss } = doc;
+        let { lap, boss, day } = doc;
         if (boss === 5) {
             boss = 1;
             ++lap;
@@ -135,6 +137,7 @@ module.exports = {
         }
         await cbSchema.updateOne({ cbId: killCbId, "IGN": "AquariumStatus"}, { $set: { lap: lap, boss: boss } });
         console.log("Killed Boss");
-        return;
+        const pings = await cbSchema.find({ "cbId": killCbId, "day": day, "IGN": { $ne: "AquariumStatus" }, "bossIds": boss }, { "_id": 0, "userId": 1 });
+        return pings;
     }
 }
