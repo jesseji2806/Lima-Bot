@@ -286,7 +286,7 @@ module.exports = {
             const embed = createEmbed(cbId, day, moment(date).unix(), lap, boss, bossIds);
             // edit the embed
             if (day === 0) {
-                await message.edit({ embeds: [embed], components: [] });
+                await message.edit({ embeds: [embed], components: [LinkRow(cbId)] });
             } else {
                 await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
             }
@@ -307,7 +307,7 @@ module.exports = {
         
         // create an embed based on the cbId, the cbDay as well as the date
         const embed = createEmbed(cbNumber, 0, startDate.unix());
-        const message = await channel.send({ embeds: [embed] });
+        const message = await channel.send({ embeds: [embed], components: [LinkRow(cbNumber)] });
 
         console.log("Starting CB for: ");
         console.log(startDate);
