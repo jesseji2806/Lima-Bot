@@ -83,7 +83,7 @@ module.exports = {
                                             Day ends at <t:${date}:F> <t:${date}:R>.\n
                                             Currently on Lap ${lap}, Boss ${boss}.\n
                                             Attacking ${tier}${boss}.`)
-                            .setThumbnail("https://pricalc.b-cdn.net/jp/unit/extract/latest/icon_unit_" + bossIds[boss-1] + "00.png");
+                            .setThumbnail("https://pricalc.b-cdn.net/jp/unit/extract/latest/icon_unit_" + bossIds[boss-1] + ".png");
             return embed;
         } else {
             const embed = new MessageEmbed()
