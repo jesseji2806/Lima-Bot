@@ -1,4 +1,4 @@
-const { MessageActionRow, MessageButton, MessageEmbed } = require('discord.js');
+const { MessageActionRow, MessageButton, MessageEmbed, Message } = require('discord.js');
 const moment = require("moment");
 
 module.exports = {
@@ -23,6 +23,10 @@ module.exports = {
                 .setCustomId("boss-killed")
                 .setLabel("Boss Killed")
                 .setStyle("SUCCESS"),
+            new MessageButton()
+                .setCustomId("undo-boss-kill")
+                .setLabel("Undo Boss Kill")
+                .setStyle("DANGER"),
         ),
     RemoveRow: new MessageActionRow()
         .addComponents(

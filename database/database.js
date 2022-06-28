@@ -126,14 +126,21 @@ module.exports = {
     },
 
     // kill boss in boss tracker
-    cbKillBoss: async function (killCbId) {
+    cbKillBoss: async function (killCbId, add) {
         const doc = await cbSchema.findOne({ "cbId": killCbId, "IGN": "AquariumStatus" });
         let { lap, boss, day } = doc;
-        if (boss === 5) {
+        if (boss === 5 && add) {
             boss = 1;
             ++lap;
-        } else {
+        } else if (add) {
             ++boss;
+        } else if (lap === 1 && boss === 1 && !add) {
+            return "Cannot remove";
+        } else if (boss === 1 && !add) {
+            --lap;
+            boss = 5;
+        } else if (!add) {
+            --boss;
         }
         await cbSchema.updateOne({ cbId: killCbId, "IGN": "AquariumStatus"}, { $set: { lap: lap, boss: boss } });
         console.log("Killed Boss");

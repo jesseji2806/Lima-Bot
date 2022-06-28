@@ -108,7 +108,7 @@ async function setCollector(newCollector) {
         }
         // killing boss
         else if (i.customId === "boss-killed") {
-            const toPing = await cbKillBoss(cbId);
+            const toPing = await cbKillBoss(cbId, true);
             await i.editReply("Boss Kill registered. Good work!");
             // updating message
             // getting status and queue data
@@ -140,6 +140,44 @@ async function setCollector(newCollector) {
                 }
                 coordPing += `boss ${boss} is up!`;
                 await newCollector.coordination.send({ "content": coordPing });
+            }
+            else if (i.customId === "undo-boss-kill") {
+                const toPing = await cbKillBoss(cbId, false);
+                await i.editReply("Undid boss kill.");
+                // updating message
+                // getting status and queue data
+                if (toPing === "Cannot remove") {
+                    return;
+                }
+                const statusData = await cbSchema.findOne({ "IGN": "AquariumStatus" });
+                const queueData = await cbQueue.findOne({ "cbId": cbId });
+                const { lap, boss, bossIds } = statusData;
+                const { date } = queueData;
+    
+                // update collector
+                newCollector.boss = boss;
+                
+                // create an embed based on the cbId and the cnDday
+                const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
+    
+                // edit the embed
+                await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+    
+                // logging
+                await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} undid a boss kill. Returning to Lap ${lap}, Boss ${boss}. `});
+    
+                // pinging
+                if (toPing.length > 0) {
+                    let coordPing = `Pinging players who wish to hit boss ${boss}:`;
+                    for (const post of toPing) {
+                        const user = post.userId;
+                        if (user) {
+                            coordPing += `<@${user}>, `;
+                        }
+                    }
+                    coordPing += `boss ${boss} is up!`;
+                    await newCollector.coordination.send({ "content": coordPing });
+                }
             }
         }
     });
