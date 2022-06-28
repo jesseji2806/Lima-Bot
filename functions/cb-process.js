@@ -141,14 +141,18 @@ async function setCollector(newCollector) {
                 coordPing += `boss ${boss} is up!`;
                 await newCollector.coordination.send({ "content": coordPing });
             }
-            else if (i.customId === "undo-boss-kill") {
-                const toPing = await cbKillBoss(cbId, false);
+        }
+        else if (i.customId === "undo-boss-kill") {
+            const toPing = await cbKillBoss(cbId, false);
+            if (toPing === "Cannot remove") {
+                    await i.editReply("Cannot undo boss kill");
+                    return;
+                }
+            else {
                 await i.editReply("Undid boss kill.");
                 // updating message
                 // getting status and queue data
-                if (toPing === "Cannot remove") {
-                    return;
-                }
+                
                 const statusData = await cbSchema.findOne({ "IGN": "AquariumStatus" });
                 const queueData = await cbQueue.findOne({ "cbId": cbId });
                 const { lap, boss, bossIds } = statusData;
