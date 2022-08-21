@@ -97,7 +97,7 @@ module.exports = {
                         await interaction.reply({ content: "CB currently active!", ephemeral: true });
                     } else {
                         // creates the documents for the clan battle
-                        createCB(cbNumber, bossIds, logs);
+                        createCB(interaction.guildId, cbNumber, bossIds, logs);
                         console.log("Created CB");
                         await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbNumber}!`);
 
