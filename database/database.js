@@ -24,21 +24,82 @@ databases.forEach(function (db) {
     }
 });
 */
+const listPlayers = {};
+clanSchema.find({}, (err, clans) => {
+    if (err) {
+        console.log(err);
+    }
+    else{
+        clans.forEach((clan) => {
+        const clanId = clan.clanId;
+        const playerNames = {
+            "IGNToId": {},
+            "idToIGN": {},
+        };
+        clan.players.forEach((player) => {
+            playerNames.IGNToId[player.IGN] = player.userId;
+            playerNames.idToIGN[player.userId] = player.IGN;
+        });
+        listPlayers[clanId] = playerNames;
+        })
+    }
+});
 
+/*
+// dict IGN = Discord id
+async function findPlayer(IGN, userId, clanId) {
+    const player = clanSchema.aggregate(
+        [
+            {
+              '$match': {
+                '$and': [
+                  {
+                    '$or': [
+                      {
+                        'players.IGN': IGN
+                      }, {
+                        'players.userId': userId
+                      }
+                    ]
+                  }, {
+                    'clanId': clanId
+                  }
+                ]
+              }
+            }, {
+              '$unwind': {
+                'path': '$players'
+              }
+            }, {
+              '$match': {
+                '$or': [
+                  {
+                    'players.IGN': IGN
+                  }, {
+                    'players.userId': userId
+                  }
+                ]
+              }
+            }
+        ]
+    );
+    return player;
+}
+*/
 
 module.exports = {
-    isPlayer: function(player) {
-        return player in listPlayers[0] || player in listPlayers[1];
+    isPlayer: function(player, clanId) {
+        return player in listPlayers[clanId].IGNToId || listPlayers[clanId].idToIGN;
     },
 
     // IGN => Discord id
-    IGNToId: function(IGN) {
-        return listPlayers[0][IGN];
+    IGNToId: function(IGN, clanId) {
+        return listPlayers[clanId].IGNToId[IGN];
     },
 
     // Discord id => IGN
-    idToIGN: function(id) {
-        return listPlayers[1][id];
+    idToIGN: function(id, clanId) {
+        return listPlayers[clanId].idToIGN[id];
     },
 
     // Hits number => Printable

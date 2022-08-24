@@ -79,7 +79,7 @@ async function setCollector(newCollector) {
     const collector = newCollector.collector;
     // define the collector function
     collector.on("collect", async function (i) {
-        let playerHit = idToIGN(i.user.id);
+        let playerHit = idToIGN(i.user.id, i.guildId);
         let { cbId, cbDay } = newCollector;
         await i.deferReply({ ephemeral: true });
         if (!playerHit) {

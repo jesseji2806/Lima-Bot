@@ -30,6 +30,7 @@ module.exports = {
 
         const interaction = args[0];
         const client = args[1];
+        const clanId = interaction.guildId;
 
         // Setting the player to update
         let playerHit = interaction.options.getString("player");
@@ -40,23 +41,23 @@ module.exports = {
 
         if (!playerHit) {
             console.log("Setting command user as player to update.");
-            playerHit = idToIGN(interaction.user.id);
+            playerHit = idToIGN(interaction.user.id, clanId);
         }
 
         // Convert to IGN if id
-        if (idToIGN(playerHit)) {
-            playerHit = idToIGN(playerHit)
+        if (idToIGN(playerHit, clanId)) {
+            playerHit = idToIGN(playerHit, clanId)
         }
         
         // Stop if the player is not valid
-        if (!isPlayer(playerHit)) {
+        if (!isPlayer(playerHit, clanId)) {
             console.log("Player is not valid.");
             await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
             return;
         }
 
         // Stop if trying to update someone else when not allowed
-        if ((IGNToId(playerHit) !== interaction.user.id) && !interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
+        if ((IGNToId(playerHit, clanId) !== interaction.user.id) && !interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
             await interaction.reply({ content: "You do not have permission to remove others' hits.", ephemeral: true });
             return;
         }

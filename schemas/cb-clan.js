@@ -10,13 +10,13 @@ const reqString = {
     required: true
 };
 
-const playerSchema = new Schema({
+const playerSchema = new mongoose.Schema({
     "IGN": reqString,
     "userId": reqString,
     "nbAcc": reqNumber
 });
 
-const clanSchema = new Schema({
+const clanSchema = new mongoose.Schema({
     "name": reqString,
     "players": [playerSchema],
     "clanId": reqString,

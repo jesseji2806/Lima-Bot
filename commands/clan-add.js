@@ -8,7 +8,7 @@ module.exports = {
 		.setName("clan-add")
 		.setDescription("Add a player to the clan")
         .addStringOption(option => 
-            option.setName("IGN")
+            option.setName("player")
                 .setDescription("Enter the IGN of the player to add to the clan")
                 .setRequired(true))
         .addUserOption(option => 
@@ -17,7 +17,11 @@ module.exports = {
                 .setRequired(true))
         .addIntegerOption(option =>
             option.setName("nb-accounts")
-                .setDescription("Enter the number of accounts the player has")),
+                .setDescription("Enter the number of accounts the player has")
+                .setRequired(true))
+        .addStringOption(option => 
+            option.setName("clan-name")
+                .setDescription("Enter the name of the clan")),
 
 	async execute(...args) {
 
@@ -36,7 +40,7 @@ module.exports = {
             nbAcc = 1;
         }
 
-        const newPlayerIGN = interaction.options.getString("IGN");
+        const newPlayerIGN = interaction.options.getString("player");
         const newPlayer = {
             "IGN": newPlayerIGN,
             "userId": interaction.options.getUser("mention").id,
@@ -44,14 +48,31 @@ module.exports = {
         };
         
         // Setting clan guildId
-        const { guildId } = interaction.guildId;
+        const guildId = interaction.guildId;
 
-        // Updating
-        const clan = await clanSchema.findOne({ "clanId": guildId  });
+        // Check clan
+        let clan = await clanSchema.findOne({ "clanId": guildId  });
+        const clanName = interaction.options.getString("clan-name");
+
+        if (!clan && !clanName) {
+            await interaction.reply({ content: "Clan does not exist! Please create add a clan name.", ephemeral: true });
+            return;
+        } else if (!clan) {
+            await new clanSchema({
+                "name": clanName,
+                "players": [],
+                "clanId": guildId,
+                "nbAcc": 0
+            }).save();
+
+            clan = await clanSchema.findOne({ "clanId": guildId  });
+        }
 
         const { name, nbAcc } = clan;
+
+        // Updating
         if (nbAcc + playerNbAcc > 30) {
-            await interaction.reply({ content: "Too many accounts in clan! Please remove some first", ephemeral: true });
+            await interaction.reply({ content: "Too many accounts in clan! Please remove some first.", ephemeral: true });
             return;
         } else {
             await clanSchema.updateOne({ "clanId": guildId }, { $inc: { "nbAcc": playerNbAcc }, $push: { "players": newPlayer }});

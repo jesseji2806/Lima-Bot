@@ -8,7 +8,7 @@ module.exports = {
 		.setName("clan-remove")
 		.setDescription("Remove a player from the clan")
         .addStringOption(option => 
-            option.setName("IGN")
+            option.setName("player")
                 .setDescription("Enter the IGN of the player to remove from the clan"))
         .addUserOption(option => 
             option.setName("player-mention")
@@ -26,30 +26,66 @@ module.exports = {
         }
 
         // Setting the player to update
-        let playerToRemove = interaction.options.getUser("player-mention").id;
+        let playerToRemove = interaction.options.getUser("player-mention");
         if (!playerToRemove) {
-            playerToRemove = interaction.options.getString("IGN");
+            playerToRemove = interaction.options.getString("player");
             if (!playerToRemove) {
                 await interaction.reply({ content: "You did not set a player!", ephemeral: true });
                 return;
             }
+        } else {
+            playerToRemove = playerToRemove.id;
         }
 
         // Setting clan guildId
-        const { guildId } = interaction.guildId;
+        const guildId = interaction.guildId;
 
         // Updating
-        const player = await clanSchema.findOne({ "clanId": guildId, "players": { $or: [{ $elemMatch: { "IGN": playerToRemove } }, { $elemMatch: { "userId": playerToRemove } }] } });
-
-        const { nbAcc } = player;
-        const nbAccToRemove = -nbAcc;
-        if (!player) {
+        // const player = await clanSchema.findOne({ "clanId": guildId, $or: [ { "players.IGN": playerToRemove }, { "players.userId": playerToRemove } ] });
+        const player = await clanSchema.aggregate([
+            {
+              $match: {
+                $and: [
+                  {
+                    "clanId": guildId
+                  },
+                  {
+                    $or: [
+                      {
+                        "players.IGN": playerToRemove
+                      },
+                      {
+                        "players.userId": playerToRemove
+                      }
+                    ]
+                  }
+                ]
+              }
+            },
+            {
+              "$unwind": "$players"
+            },
+            {
+              $match: {
+                "players.IGN": playerToRemove
+              }
+            },
+            {
+              "$replaceRoot": {
+                "newRoot": "$players"
+              }
+            }
+        ]);
+        
+        // Check if player exists
+        if (player.length <= 0) {
             await interaction.reply({ content: "Player is not in clan!", ephemeral: true });
             return;
-        } else {
-            await clanSchema.updateOne({ "clanId": guildId }, { $inc: { "nbAcc": nbAcc }, $pull: { "players": newPlayer }});
-            await interaction.reply({ content: `Removed ${player} from clan.`});
-            return;
         }
+        const { IGN, userId, nbAcc } = player[0];
+        const nbAccToRemove = -nbAcc;
+
+        await clanSchema.updateOne({ "clanId": guildId }, { $inc: { "nbAcc": nbAccToRemove }, $pull: { "players": { "IGN": IGN, "userId": userId } } });
+        await interaction.reply({ content: `Removed ${playerToRemove} from clan.`});
     },
 }
