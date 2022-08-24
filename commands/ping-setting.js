@@ -24,6 +24,7 @@ module.exports = {
 	async execute(...args) {
 
         const interaction = args[0];
+        const clanId = interaction.guildId;
 
         // Setting the player to update
         let playerToUpdate = interaction.options.getString("player");
@@ -34,16 +35,16 @@ module.exports = {
 
         if (!playerToUpdate) {
             console.log("Setting command user as player to update.");
-            playerToUpdate = idToIGN(interaction.user.id);
+            playerToUpdate = idToIGN(interaction.user.id, clanId);
         }
 
         // Convert to IGN if id
-        if (idToIGN(playerToUpdate)) {
-            playerToUpdate = idToIGN(playerToUpdate)
+        if (idToIGN(playerToUpdate, clanId)) {
+            playerToUpdate = idToIGN(playerToUpdate, clanId);
         }
         
         // Stop if the player is not valid
-        if (!isPlayer(playerToUpdate)) {
+        if (!isPlayer(playerToUpdate, clanId)) {
             console.log("Player is not valid.");
             await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
             return;

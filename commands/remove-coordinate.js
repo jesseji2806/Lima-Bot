@@ -27,6 +27,7 @@ module.exports = {
 	async execute(...args) {
 
         const interaction = args[0];
+        const clanId = interaction.guildId;
 
         // Getting the boss to add to coordination
         const boss = interaction.options.getInteger("boss");
@@ -40,23 +41,23 @@ module.exports = {
 
         if (!playerCoord) {
             console.log("Setting command user as player to update.");
-            playerCoord = idToIGN(interaction.user.id);
+            playerCoord = idToIGN(interaction.user.id, clanId);
         }
 
         // Convert to IGN if id
-        if (idToIGN(playerCoord)) {
-            playerCoord = idToIGN(playerCoord)
+        if (idToIGN(playerCoord, clanId)) {
+            playerCoord = idToIGN(playerCoord, clanId)
         }
         
         // Stop if the player is not valid
-        if (!isPlayer(playerCoord)) {
+        if (!isPlayer(playerCoord, clanId)) {
             console.log("Player is not valid.");
             await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
             return;
         }
 
         // Stop if trying to update someone else when not allowed
-        if ((IGNToId(playerCoord) !== interaction.user.id) && !interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
+        if ((IGNToId(playerCoord, clanId) !== interaction.user.id) && !interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
             await interaction.reply({ content: "You do not have permission to change others' hit coordination.", ephemeral: true });
             return;
         }
