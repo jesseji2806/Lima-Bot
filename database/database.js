@@ -89,7 +89,7 @@ async function findPlayer(IGN, userId, clanId) {
 
 module.exports = {
     isPlayer: function(player, clanId) {
-        return player in listPlayers[clanId].IGNToId || listPlayers[clanId].idToIGN;
+        return player in listPlayers[clanId].IGNToId || player in listPlayers[clanId].idToIGN;
     },
 
     // IGN => Discord id
