@@ -165,7 +165,7 @@ async function setCollector(newCollector) {
 				const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
     
 				// edit the embed
-				await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+				await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId), PingKoishiRow] });
     
 				// logging
 				await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} undid a boss kill. Returning to Lap ${lap}, Boss ${boss}. `});
