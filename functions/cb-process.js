@@ -333,7 +333,7 @@ module.exports = {
 			if (day === 0) {
 				await message.edit({ embeds: [embed], components: [LinkRow(cbId)] });
 			} else {
-				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId), PingKoishiRow] });
 			}
 			// create a new collector
 			collectors[channelId] = new cbCollector(cbId, day, boss, channel, message, logs, coordination);
