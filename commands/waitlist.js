@@ -22,7 +22,7 @@ module.exports = {
         for (let i = 1; i <= 5; ++i) {
             const players = await cbSchema.find({ "cbId": cbId, "day": day, "IGN": { $ne: "AquariumStatus" }, "bossIds": i }, { "_id": 0, "IGN": 1 }, { sort: { "_id": 1 } });
             if (players.length > 0) {
-                toReply += `Boss ${i}:\n`;
+                toReply += `**Boss ${i}:**\n`;
                 for (const player of players) {
                     toReply += `${player.IGN}\n`;
                 }
