@@ -186,6 +186,7 @@ async function setCollector(newCollector) {
 		} 
 		else if (i.customId === "ping-koishi") {
 			await i.editReply("Pinged the leader hihi");
+			await newCollector.coordination.send({ "content": `(CB${cbId}) ${i.user.tag} pinged leader <@386577302546546689>.` });
 			await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} pinged leader <@386577302546546689>.` });
 		}
 	});
