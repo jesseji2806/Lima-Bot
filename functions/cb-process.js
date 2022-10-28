@@ -82,7 +82,7 @@ async function setCollector(newCollector) {
 		let playerHit = idToIGN(i.user.id, i.guildId);
 		let { cbId, cbDay } = newCollector;
 		await i.deferReply({ ephemeral: true });
-		if (!playerHit) {
+		if (!playerHit && i.customId !== "ping-koishi") {
 			await i.editReply({ content: "You are not in Aquarium!" });
 			return;
 		}
