@@ -1,9 +1,10 @@
 const { Schema, model } = require("mongoose");
-const cbSchema = require("../schemas/cb-schema.js");
+const { cbSchema } = require("../schemas/cb-schema.js");
 
 const reqNumber = {
 	type: Number,
 	required: true,
+	default: 0,
 };
 
 const reqString = {
@@ -14,6 +15,7 @@ const reqString = {
 const reqBoolean = {
 	type: Boolean,
 	required: true,
+	default: false,
 };
 
 /**
@@ -40,7 +42,6 @@ const clanSchema = new Schema({
 const name = "cb-clan";
 
 module.exports = {
-
 	/**
      * A schema for a Priconne clan
      * @property {String} name

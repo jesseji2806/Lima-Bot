@@ -55,7 +55,7 @@ module.exports = {
 
 		const interaction = args[0];
 		const client = args[1];
-		const clanId = interaction.guildId;
+		const guildId = interaction.guildId;
 
 		// checking for permissions
 		if (!interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
@@ -87,19 +87,23 @@ module.exports = {
 		const logs = interaction.options.getChannel("logs").id;
 
 		// Check if a CB is currently active
-		const { cbActive, CBs } = await clanSchema.findOne({ "clanId": clanId });
+		const clanData = await clanSchema.findOne({ "clanId": guildId });
+		if (!clanData) {
+			await interaction.reply({ content: "No clan data was found!", ephemeral: true });
+			return;
+		}
 
 		// Check if existing CB
-		const cbExists = CBs.find(cb => cb.cbId === cbId) === undefined;
+		const cbExists = clanData.CBs.find(cb => cb.cbId === cbId) !== undefined;
 
-		if (cbExists || cbActive) {
+		if (cbExists || clanData.cbActive) {
 			await interaction.reply({ content: "Either CB already exists or a CB is currently active!", ephemeral: true });
 			return;
 		}
 		else {
 			// creates the documents for the clan battle
-			createCB(clanId, cbId, bossIds, logs);
-			console.log(`Created CB in server ${clanId}`);
+			await createCB(guildId, cbId, bossIds, logs);
+			console.log(`Created CB in server ${guildId}`);
 			await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbId}!`);
 
 			dateParsed.utc().hour(13);

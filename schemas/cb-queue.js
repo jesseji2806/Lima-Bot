@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const reqNumber = {
 	type: Number,
 	required: true,
+	default: 0,
 };
 
 const reqString = {
@@ -21,6 +22,7 @@ const queue = new mongoose.Schema({
 	messageId: reqString,
 	logsId: reqString,
 	coordinationId: reqString,
+	clanId: reqString,
 });
 
 const name = "cb-queue";

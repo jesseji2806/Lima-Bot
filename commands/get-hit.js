@@ -1,63 +1,79 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const cbSchema = require("../schemas/cb-schema");
-const { idToIGN, IGNToId, isPlayer } = require("../database/database");
+const { clanSchema } = require("../schemas/cb-clan");
+const { idToIGN } = require("../database/database");
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("get-hit")
 		.setDescription("Find number of hits done to a CB")
-        .addStringOption(option => 
-            option.setName("player")
-                .setDescription("Enter the player to find hits of"))
-        .addUserOption(option => 
-            option.setName("player-mention")
-                .setDescription("Enter the player to find hits of using a mention"))
-        .addIntegerOption(option =>
-            option.setName("cb-id")
-                .setDescription("Enter the CB you want to look up")),
+		.addStringOption(option => 
+			option.setName("player")
+				.setDescription("Enter the player to find hits of"))
+		.addUserOption(option => 
+			option.setName("player-mention")
+				.setDescription("Enter the player to find hits of using a mention"))
+		.addIntegerOption(option =>
+			option.setName("cb-id")
+				.setDescription("Enter the CB you want to look up")),
 
 	async execute(...args) {
 
-        const interaction = args[0];
-        const clanId = interaction.guildId;
+		const interaction = args[0];
+		const guildId = interaction.guildId;
 
-        // Setting the player to update
-        let playerToFind = interaction.options.getString("player");
-        const playerToFindMention = interaction.options.getUser("player-mention");
-        if (playerToFindMention) {
-            playerToFind = playerToFindMention.id;
-        }
-        if (!playerToFind) {
-            console.log("Setting command user as player to update.");
-            playerToFind = idToIGN(interaction.user.id, clanId);
-        }
+		// Setting the player to update
+		let playerToFind = interaction.options.getString("player");
+		const playerToFindMention = interaction.options.getUser("player-mention");
+		if (playerToFindMention) {
+			playerToFind = playerToFindMention.id;
+		}
+		if (!playerToFind) {
+			console.log("Setting command user as player to update.");
+			playerToFind = idToIGN(interaction.user.id, guildId);
+		}
 
-        // Convert to IGN if id
-        if (idToIGN(playerToFind, clanId)) {
-            playerToFind = idToIGN(playerToFind, clanId)
-        }
-        
-        // Stop if the player is not valid
-        if (!isPlayer(playerToFind, clanId)) {
-            console.log("Player is not valid.");
-            await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
-            return;
-        }
-        let cbToFind = interaction.options.getInteger("cb-id");
+		// Clan data
+		const clanData = await clanSchema.findOne({ "clanId": guildId });
+		if (!clanData) {
+			await interaction.reply({ content: "No clan data was found!", ephemeral: true });
+			return;
+		}
 
-        if (!cbToFind) {
-            const status = await cbSchema.findOne({ IGN: "AquariumStatus" });
-            cbToFind = status.cbId;
-        }
+		let cbToFind = interaction.options.getInteger("cb-id");
 
-        const results = await cbSchema.find({ cbId: cbToFind, IGN: playerToFind }).sort({ day: "asc" });
+		let cbData;
+		if (!cbToFind) {
+			cbData = clanData.CBs.reduce((p, c) => p.cbId > c.cbId ? p : c);
+		}
+		else {
+			cbData = clanData.CBs.find(cb => cb.cbId === cbToFind);
+		}
 
-        let toReply = `Results for ${playerToFind} for CB${cbToFind}\n`;
-        for (const post of results) {
-            const { day, hitsDone, nbAcc} = post;
-            const maxHits = nbAcc * 3;
-            toReply += `Day ${day} : ${hitsDone} out of ${maxHits} hits complete.\n`;
-        }
-        await interaction.reply(toReply);
-    },
-}
+		// return if no CB was found
+		if (cbData === undefined) {
+			await interaction.reply({ content: "No CB data was found!", ephemeral: true });
+			return;
+		}
+
+		cbToFind = cbData.cbId;
+		const player = cbData.hitList.find(cbPlayer => {
+			return cbPlayer.IGN === playerToFind || cbPlayer.userId === playerToFind;
+		});
+
+		// return if no player was found to match
+		if (player === undefined) {
+			console.log("Player is not valid.");
+			await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
+			return;
+		}
+
+		const maxHits = player.nbAcc * 3;
+
+		// Create reply
+		let toReply = `Results for ${playerToFind} for CB${cbToFind}\n`;
+		for (let i = 0; i < 5; i++) {
+			toReply += `**Day ${i + 1}** : ${player.hits[i].hitsDone} out of ${maxHits} hits complete.\n`;
+		}
+		await interaction.reply(toReply);
+	},
+};

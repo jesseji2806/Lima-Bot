@@ -19,7 +19,10 @@ const reqString = {
 const cbHitSchema = new Schema({
 	"day": reqNumber,
 	"hitsDone": reqNumber,
-	"coordinate": [Number],
+	"coordinate": {
+		type: [Boolean],
+		default: Array(5).fill(false),
+	},
 });
 
 /**
@@ -51,18 +54,29 @@ const cbPlayerSchema = new Schema({
  */
 const cbSchema = new Schema({
 	"cbId": reqNumber,
-	"day": reqNumber,
+	"day": {
+		type: Number,
+		default: 0,
+		required: true,
+	},
 	"nbAcc": reqNumber,
-	"hitsDone": Array,
-	"lap": Number,
-	"boss": Number,
+	"hitsDone": {
+		type: Array,
+		default: Array(5).fill(0),
+	},
+	"lap": {
+		type: Number,
+		default: 1,
+	},
+	"boss": {
+		type: Number,
+		default: 1,
+	},
 	"bossIds": Array,
 	"hitList": [cbPlayerSchema],
 	"logs": String,
 });
 
 module.exports = {
-	cbSchema,
-	cbPlayerSchema,
-	cbHitSchema,
+	cbSchema: cbSchema,
 };

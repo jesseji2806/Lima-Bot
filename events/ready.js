@@ -16,7 +16,7 @@ module.exports = {
 			useNewUrlParser: true,
 			useUnifiedTopology: true,
 		}).then(() => {
-			console.log("The client is now connected to the database")
+			console.log("The client is now connected to the database");
 			restartProcess(client);
 		}).catch((err) => {
 			console.log(err);

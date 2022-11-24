@@ -43,6 +43,8 @@ module.exports = {
 
 		// Updating
 		// const player = await clanSchema.findOne({ "clanId": guildId, $or: [ { "players.IGN": playerToRemove }, { "players.userId": playerToRemove } ] });
+
+		// Find player
 		const player = await clanSchema.aggregate([
 			{
 				$match: {
