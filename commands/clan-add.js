@@ -1,7 +1,7 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const { clanSchema } = require("../schemas/cb-clan");
 const { Permissions } = require("discord.js");
-const { default: mongoose } = require("mongoose");
+const { updatePlayers } = require("../database/database");
 
 
 module.exports = {
@@ -12,14 +12,16 @@ module.exports = {
 			option.setName("player")
 				.setDescription("Enter the IGN of the player to add to the clan")
 				.setRequired(true))
-		.addUserOption(option => 
+		.addUserOption(option =>
 			option.setName("mention")
 				.setDescription("Mention the player to add to the clan")
 				.setRequired(true))
 		.addIntegerOption(option =>
 			option.setName("nb-accounts")
 				.setDescription("Enter the number of accounts the player has")
-				.setRequired(true))
+				.setRequired(true)
+				.setMinValue(0)
+				.setMaxValue(30))
 		.addStringOption(option =>
 			option.setName("clan-name")
 				.setDescription("Enter the name of the clan")),
@@ -27,7 +29,6 @@ module.exports = {
 	async execute(...args) {
 
 		const interaction = args[0];
-		const client = args[1];
 
 		// Stop if not mod
 		if (!interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
@@ -36,13 +37,9 @@ module.exports = {
 		}
 
 		// Setting the player to update
-		let playerNbAcc = interaction.options.getInteger("nb-accounts");
-		if (!playerNbAcc) {
-			playerNbAcc = 1;
-		}
-
+		const playerNbAcc = interaction.options.getInteger("nb-accounts");
 		const newPlayerIGN = interaction.options.getString("player");
-		const newPlayerId = interaction.options.getUser("mention").id
+		const newPlayerId = interaction.options.getUser("mention").id;
 
 		// Create document for the new player
 		const newPlayer = {
@@ -89,6 +86,7 @@ module.exports = {
 		// Adding to clan
 		else {
 			await clanSchema.updateOne({ "clanId": guildId }, { $inc: { "nbAcc": playerNbAcc }, $push: { "players": newPlayer } });
+			await updatePlayers(guildId);
 			await interaction.reply({ content: `Added ${newPlayerIGN} to ${name}.` });
 			return;
 		}

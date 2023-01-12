@@ -1,5 +1,5 @@
-const { MessageActionRow, MessageButton, MessageEmbed, Message } = require("discord.js");
-const moment = require("moment");
+const { MessageActionRow, MessageButton, MessageEmbed } = require("discord.js");
+const frontend = process.env.FRONTEND;
 
 module.exports = {
 	AddRow: new MessageActionRow()
@@ -43,15 +43,13 @@ module.exports = {
 				.setLabel("Remove All Hits")
 				.setStyle("DANGER"),
 		),
-	LinkRow: (cbId) => {
+	LinkRow: (guildId, cbId) => {
 		const row = new MessageActionRow()
 			.addComponents(
-				/** Temporarily removed due to Heroku going paid
 				new MessageButton()
 					.setLabel("Hit List")
 					.setStyle("LINK")
-					.setURL(`https://aquarium-hitlist.herokuapp.com/hitlist/${cbId}`),
-				*/
+					.setURL(frontend + `${guildId}/hitlist/${cbId}`),
 				new MessageButton()
 					.setLabel("Auto Teams")
 					.setStyle("LINK")
@@ -59,7 +57,7 @@ module.exports = {
 		return row;
 	},
 
-	createEmbed: function (cbId, cbDay, ...args) {
+	createEmbed: function(cbId, cbDay, ...args) {
 		if (cbDay === 0) {
 			const date = args[0];
 			console.log(date);
@@ -81,8 +79,11 @@ module.exports = {
 			else if (lap <= 10) {
 				tier = "B";
 			}
-			else {
+			else if (lap <= 34) {
 				tier = "C";
+			}
+			else {
+				tier = "D";
 			}
 
 			const embed = new MessageEmbed()
@@ -94,7 +95,8 @@ module.exports = {
                                             Attacking ${tier}${boss}.`)
 				.setThumbnail("https://pricalc.b-cdn.net/jp/unit/extract/latest/icon_unit_" + bossIds[boss - 1] + ".png");
 			return embed;
-		} else {
+		}
+		else {
 			const embed = new MessageEmbed()
 				.setColor("#0099ff")
 				.setTitle(`CB ${cbId}`)

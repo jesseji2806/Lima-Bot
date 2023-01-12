@@ -28,7 +28,7 @@ clanSchema.find({}, (err, clans) => {
 	}
 	else {
 		clans.forEach((clan) => {
-			const clanId = clan.clanId;
+			const guildId = clan.clanId;
 			const playerNames = {
 				"IGNToId": {},
 				"idToIGN": {},
@@ -37,10 +37,29 @@ clanSchema.find({}, (err, clans) => {
 				playerNames.IGNToId[player.IGN] = player.userId;
 				playerNames.idToIGN[player.userId] = player.IGN;
 			});
-			listPlayers[clanId] = playerNames;
+			listPlayers[guildId] = playerNames;
 		});
 	}
 });
+
+async function updatePlayers(guildId) {
+	clanSchema.findOne({ "clanId": guildId }, (err, clan) => {
+		if (err) {
+			console.log(err);
+		}
+		else {
+			const playerNames = {
+				"IGNToId": {},
+				"idToIGN": {},
+			};
+			clan.players.forEach((player) => {
+				playerNames.IGNToId[player.IGN] = player.userId;
+				playerNames.idToIGN[player.userId] = player.IGN;
+			});
+			listPlayers[guildId] = playerNames;
+		}
+	});
+}
 
 /*
 // dict IGN = Discord id
@@ -86,33 +105,41 @@ async function findPlayer(IGN, userId, clanId) {
 
 module.exports = {
 	/**
+	 * Updates the list of players for a given clan
+	 * @param {String} guildId
+	 */
+	updatePlayers: async function(guildId) {
+		await updatePlayers(guildId);
+	},
+
+	/**
 	 * Checks if player is in the clan list
 	 * @param {String} player
-	 * @param {String} clanId
-	 * @returns {Boolean} true if player in given clanId
+	 * @param {String} guildId
+	 * @returns {Boolean} true if player in given guildId
 	 */
-	isPlayer: function(player, clanId) {
-		return player in listPlayers[clanId].IGNToId || player in listPlayers[clanId].idToIGN;
+	isPlayer: function(player, guildId) {
+		return player in listPlayers[guildId].IGNToId || player in listPlayers[guildId].idToIGN;
 	},
 
 	/**
 	 * IGN => Discord id
 	 * @param {String} IGN
-	 * @param {String} clanId
+	 * @param {String} guildId
 	 * @returns {String} Discord id of IGN
 	 */
-	IGNToId: function(IGN, clanId) {
-		return listPlayers[clanId].IGNToId[IGN];
+	IGNToId: function(IGN, guildId) {
+		return listPlayers[guildId].IGNToId[IGN];
 	},
 
 	/**
 	 * Discord id => IGN
 	 * @param {String} id
-	 * @param {String} clanId
+	 * @param {String} guildId
 	 * @returns {String} IGN of Discord id
 	 */
-	idToIGN: function(id, clanId) {
-		return listPlayers[clanId].idToIGN[id];
+	idToIGN: function(id, guildId) {
+		return listPlayers[guildId].idToIGN[id];
 	},
 
 	// Hits number => Printable
@@ -128,10 +155,10 @@ module.exports = {
 	},
 
 	// create CB documents
-	createCB: async function(clanId, cbId, bossIds, logs) {
+	createCB: async function(guildId, cbId, bossIds, logs) {
 
 		// Find clan data based on clan id
-		const clanData = await clanSchema.findOne({ "clanId": clanId });
+		const clanData = await clanSchema.findOne({ "clanId": guildId });
 
 		const players = clanData.players.filter(player => player.nbAcc > 0);
 

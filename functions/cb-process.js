@@ -110,7 +110,7 @@ async function setCollector(newCollector) {
 		const cbDay = cbData.day;
 
 		await i.deferReply({ ephemeral: true });
-		if (!isPlayer(i.user.id, i.guildId)) {
+		if (!isPlayer(i.user.id, i.guildId) && i.customId !== "boss-killed" && i.customId !== "undo-boss-kill") {
 			await i.editReply({ content: "You are not participating in this CB!" });
 			return;
 		}
@@ -155,7 +155,7 @@ async function setCollector(newCollector) {
 			const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
 
 			// edit the embed
-			await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+			await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(i.guildId, cbId)] });
 
 			// logging
 			await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} killed a boss. Moving to Lap ${lap}, Boss ${boss}. ` });
@@ -194,7 +194,7 @@ async function setCollector(newCollector) {
 				const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
 
 				// edit the embed
-				await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+				await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(i.guildId, cbId)] });
 
 				// logging
 				await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} undid a boss kill. Returning to Lap ${lap}, Boss ${boss}. ` });
@@ -308,7 +308,7 @@ function tracker(client) {
 			}
 			else {
 				// edit the embed
-				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(clanId, cbId)] });
 			}
 		}
 
@@ -383,10 +383,10 @@ module.exports = {
 			const embed = createEmbed(cbId, day, moment(date).unix(), lap, boss, bossIds);
 			// edit the embed
 			if (day === 0) {
-				await message.edit({ embeds: [embed], components: [LinkRow(cbId)] });
+				await message.edit({ embeds: [embed], components: [LinkRow(clanId, cbId)] });
 			}
 			else {
-				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(cbId)] });
+				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(clanId, cbId)] });
 			}
 			// create a new collector
 			collectors[clanId] = new cbCollector(channel, message, logs, coordination, status);
@@ -406,7 +406,7 @@ module.exports = {
 
 		// create an embed based on the cbId, the cbDay as well as the date
 		const embed = createEmbed(cbNumber, 0, startDate.unix());
-		const message = await channel.send({ embeds: [embed], components: [LinkRow(cbNumber)] });
+		const message = await channel.send({ embeds: [embed], components: [LinkRow(guildId, cbNumber)] });
 
 		// retrieve cb data
 		const clanData = await clanSchema.findOne({ "clanId": guildId });

@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const { clanSchema } = require("../schemas/cb-clan");
+const { updatePlayers } = require("../database/database");
 const { Permissions } = require("discord.js");
 
 
@@ -96,6 +97,7 @@ module.exports = {
 		const nbAccToRemove = -nbAcc;
 
 		await clanSchema.updateOne({ "clanId": guildId }, { $inc: { "nbAcc": nbAccToRemove }, $pull: { "players": { "IGN": IGN, "userId": userId } } });
+		await updatePlayers(guildId);
 		await interaction.reply({ content: `Removed ${playerToRemove} from clan.` });
 	},
 };

@@ -1,8 +1,6 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
 const { clanSchema } = require("../schemas/cb-clan");
 const { Permissions } = require("discord.js");
-const { default: mongoose } = require("mongoose");
-
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -24,7 +22,6 @@ module.exports = {
 	async execute(...args) {
 
 		const interaction = args[0];
-		const client = args[1];
 
 		// Stop if not mod
 		if (!interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
