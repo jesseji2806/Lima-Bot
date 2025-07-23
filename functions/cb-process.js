@@ -372,7 +372,7 @@ module.exports = {
 		const cbData = clanData.CBs.find(cb => cb.cbId === cbNumber);
 
 		console.log("Starting CB for: ");
-		console.log(startDate.format("DD-MM-YYYY"));
+		console.log(startDate.format("DD-MM-YYYY HH:mm:ss"));
 		// create collector
 		// check if collector already exists
 		console.log("Starting collector");

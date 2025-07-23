@@ -4,7 +4,6 @@ const { startProcess } = require("../../functions/cb-process");
 const dayjs = require("dayjs");
 const utc = require("dayjs/plugin/utc");
 const customParseFormat = require("dayjs/plugin/customParseFormat");
-const { get } = require("mongoose");
 dayjs.extend(utc);
 dayjs.extend(customParseFormat);
 
@@ -104,8 +103,8 @@ module.exports = {
 			console.log(`Created CB in clan ${clanData.name} with id ${clanId}`);
 			await interaction.reply(`${interaction.user.tag} started a new clan battle, CB${cbId}!`);
 
-			dateParsed.utc().hour(20);
-			startProcess(interaction, cbId, dateParsed);
+			const startDate = dateParsed.utc().hour(20);
+			startProcess(interaction, cbId, startDate);
 		}
 	},
 };
