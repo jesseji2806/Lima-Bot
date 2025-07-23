@@ -174,6 +174,7 @@ async function setCollector(newCollector) {
 		}
 		else if (i.customId === "undo-boss-kill") {
 			const toPing = await cbKillBoss(cbData, false);
+
 			if (toPing === "Cannot remove") {
 				await i.editReply("Cannot undo boss kill");
 				return;
