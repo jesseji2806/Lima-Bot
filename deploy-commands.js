@@ -6,6 +6,9 @@ const token = process.env.DISCORD_TOKEN;
 const fs = require("node:fs");
 const path = require("node:path");
 
+// Check for production deployment argument
+const isProduction = process.argv.includes("--prod") || process.argv.includes("--production");
+
 const commands = [];
 // Grab all the command files from the commands directory
 const foldersPath = path.join(__dirname, "commands");
@@ -34,13 +37,27 @@ const rest = new REST().setToken(token);
 	try {
 		console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
-		// The put method is used to fully refresh all commands in the guild with the current set
-		const data = await rest.put(
-			Routes.applicationGuildCommands(clientId, guildId),
-			{ body: commands },
-		);
+		let deploymentInfo;
+		if (isProduction) {
+			console.log("Deploying commands globally (production mode)...");
+			deploymentInfo = await rest.put(
+				Routes.applicationCommands(clientId),
+				{ body: commands },
+			);
+		}
+		else {
+			console.log(`Deploying commands to guild ${guildId} (development mode)...`);
+			if (!guildId) {
+				throw new Error("GUILD_ID is required for development deployment. Set it in your .env file or use --prod for global deployment.");
+			}
+			deploymentInfo = await rest.put(
+				Routes.applicationGuildCommands(clientId, guildId),
+				{ body: commands },
+			);
+		}
 
-		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
+		console.log(`Successfully reloaded ${deploymentInfo.length} application (/) commands.`);
+		console.log(`Deployment mode: ${isProduction ? "Production (Global)" : "Development (Guild-specific)"}`);
 	}
 	catch (error) {
 		// And of course, make sure you catch and log any errors!
