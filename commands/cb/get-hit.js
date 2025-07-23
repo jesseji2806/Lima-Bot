@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, MessageFlags } = require("discord.js");
-const { getClanIdAndData, idToIGN } = require("../../database/database");
+const { getClanIdAndData, idToIGN, IGNToId } = require("../../database/database");
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -32,9 +32,12 @@ module.exports = {
 		if (playerToFindMention) {
 			playerToFind = playerToFindMention.id;
 		}
+		else if (playerToFind) {
+			playerToFind = await IGNToId(playerToFind, clanId) || playerToFind;
+		}
 		if (!playerToFind) {
 			console.log("Setting command user as player to update.");
-			playerToFind = await idToIGN(interaction.user.id, clanId);
+			playerToFind = interaction.user.id;
 		}
 
 		// Default to find latest CB
@@ -69,7 +72,7 @@ module.exports = {
 		const maxHits = player.nbAcc * 3;
 
 		// Create reply
-		let toReply = `Results for ${playerToFind} for CB${cbToFind}\n`;
+		let toReply = `Results for ${await idToIGN(playerToFind, clanId) || playerToFind} for CB${cbToFind}\n`;
 		for (let i = 0; i < 5; i++) {
 			toReply += `**Day ${i + 1}** : ${player.hits[i].hitsDone} out of ${maxHits} hits complete.\n`;
 		}
