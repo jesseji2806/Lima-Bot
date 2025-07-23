@@ -1,5 +1,6 @@
 node_modules
 .env
+.vscode
 database/json-writer.js
 database/Aquarium.json
 schemas/Aquarium-schema.js

@@ -21,7 +21,7 @@ const queue = new mongoose.Schema({
 	channelId: reqString,
 	messageId: reqString,
 	logsId: reqString,
-	coordinationId: reqString,
+	coordinationId: String,
 	clanId: reqString,
 });
 

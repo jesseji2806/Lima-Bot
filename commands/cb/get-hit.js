@@ -1,25 +1,30 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { clanSchema } = require("../schemas/cb-clan");
-const { idToIGN } = require("../database/database");
+const { SlashCommandBuilder, MessageFlags } = require("discord.js");
+const { getClanIdAndData, idToIGN } = require("../../database/database");
 
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName("get-hit")
 		.setDescription("Find number of hits done to a CB")
-		.addStringOption(option => 
+		.addStringOption(option =>
 			option.setName("player")
 				.setDescription("Enter the player to find hits of"))
-		.addUserOption(option => 
+		.addUserOption(option =>
 			option.setName("player-mention")
 				.setDescription("Enter the player to find hits of using a mention"))
 		.addIntegerOption(option =>
 			option.setName("cb-id")
 				.setDescription("Enter the CB you want to look up")),
 
-	async execute(...args) {
+	async execute(interaction) {
 
-		const interaction = args[0];
-		const guildId = interaction.guildId;
+		const { clanId, clanData } = await getClanIdAndData(interaction);
+		if (!clanId || !clanData) {
+			await interaction.reply({
+				content: "Clan does not exist or is not accessible! Please create a clan first or try a different channel.",
+				flags: MessageFlags.Ephemeral,
+			});
+			return;
+		}
 
 		// Setting the player to update
 		let playerToFind = interaction.options.getString("player");
@@ -29,16 +34,10 @@ module.exports = {
 		}
 		if (!playerToFind) {
 			console.log("Setting command user as player to update.");
-			playerToFind = idToIGN(interaction.user.id, guildId);
+			playerToFind = await idToIGN(interaction.user.id, clanId);
 		}
 
-		// Clan data
-		const clanData = await clanSchema.findOne({ "clanId": guildId });
-		if (!clanData) {
-			await interaction.reply({ content: "No clan data was found!", ephemeral: true });
-			return;
-		}
-
+		// Default to find latest CB
 		let cbToFind = interaction.options.getInteger("cb-id");
 
 		let cbData;
@@ -51,7 +50,7 @@ module.exports = {
 
 		// return if no CB was found
 		if (cbData === undefined) {
-			await interaction.reply({ content: "No CB data was found!", ephemeral: true });
+			await interaction.reply({ content: "No CB data was found!", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
@@ -63,7 +62,7 @@ module.exports = {
 		// return if no player was found to match
 		if (player === undefined) {
 			console.log("Player is not valid.");
-			await interaction.reply({ content: "You have entered an invalid player name.", ephemeral: true});
+			await interaction.reply({ content: "You have entered an invalid player name.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 

@@ -1,6 +1,6 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { clanSchema } = require("../schemas/cb-clan");
-const { Permissions } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags, PermissionsBitField } = require("discord.js");
+const { clanSchema } = require("../../schemas/cb-clan");
+const { getClanId } = require("../../database/database");
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -19,13 +19,11 @@ module.exports = {
 			option.setName("mention")
 				.setDescription("Mention the player in to the clan")),
 
-	async execute(...args) {
-
-		const interaction = args[0];
+	async execute(interaction) {
 
 		// Stop if not mod
-		if (!interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
-			await interaction.reply({ content: "You do not have permission to modify clan.", ephemeral: true });
+		if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
+			await interaction.reply({ content: "You do not have permission to modify clan.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
@@ -43,38 +41,42 @@ module.exports = {
 			playerId = interaction.user.id;
 		}
 
-		// Setting clan guildId
-		const guildId = interaction.guildId;
-
 		// Check clan
-		const clanData = await clanSchema.findOne({ "clanId": guildId });
+		const clanId = await getClanId(interaction);
 
-		if (!clanData) {
-			await interaction.reply({ content: "Clan does not exist! Please create a clan first.", ephemeral: true });
+		if (!clanId) {
+			await interaction.reply({ content: "Clan does not exist or is not accessible! Please create a clan first or try a different channel.", flags: MessageFlags.Ephemeral });
 			return;
 		}
+
+		const clanData = await clanSchema.findById(clanId);
 
 		const { nbAcc } = clanData;
 
 		// Getting player data
 		const player = clanData.players.find(p => p.userId === playerId || p.IGN === playerIGN);
 		if (player === undefined) {
-			await interaction.reply({ content: "The player is not in the clan! Add them first using /clan-add.", ephemeral: true });
+			await interaction.reply({ content: "The player is not in the clan! Add them first using /clan-add.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
 		// Updating
 		// Clan max
 		if (nbAcc + playerNbAcc - player.nbAcc > 30) {
-			await interaction.reply({ content: "Too many accounts in clan! Please remove some first.", ephemeral: true });
+			await interaction.reply({ content: "Too many accounts in clan! Please remove some first.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 		// Updating
 		else {
+			let replyMessage = "";
 			clanData.nbAcc += playerNbAcc - player.nbAcc;
 			player.nbAcc = playerNbAcc;
+			if (playerIGN !== player.IGN) {
+				replyMessage += `Changed IGN ${player.IGN} to ${playerIGN}.\n`;
+				player.IGN = playerIGN;
+			}
 			await clanData.save();
-			await interaction.reply({ content: `Changed ${player.IGN} to ${playerNbAcc} account(s).` });
+			await interaction.reply({ content: replyMessage + `Changed ${player.IGN} to ${playerNbAcc} account(s).` });
 			return;
 		}
 	},

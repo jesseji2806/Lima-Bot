@@ -33,7 +33,9 @@ const playerSchema = new Schema({
 const clanSchema = new Schema({
 	"name": reqString,
 	"players": [playerSchema],
-	"clanId": reqString,
+	"clanId": String,
+	"guildId": reqString,
+	"categoryId": String,
 	"nbAcc": reqNumber,
 	"CBs": [cbSchema],
 	"cbActive": reqBoolean,
@@ -46,7 +48,9 @@ module.exports = {
      * A schema for a Priconne clan
      * @property {String} name
      * @property {playerSchema[]} players
-     * @property {String} clanId
+     * @property {String} clanId - deprecated, use guildId instead
+	 * @property {String} guildId
+	 * @property {String} categoryId
      * @property {Number} nbAcc
      * @property {cbSchema[]} CBs
      * @property {Boolean} cbActive

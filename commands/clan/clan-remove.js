@@ -1,7 +1,6 @@
-const { SlashCommandBuilder } = require("@discordjs/builders");
-const { clanSchema } = require("../schemas/cb-clan");
-const { updatePlayers } = require("../database/database");
-const { Permissions } = require("discord.js");
+const { SlashCommandBuilder, MessageFlags, PermissionsBitField } = require("discord.js");
+const { clanSchema } = require("../../schemas/cb-clan");
+const { getClanIdAndData, clearPlayersCache } = require("../../database/database");
 
 
 module.exports = {
@@ -15,14 +14,11 @@ module.exports = {
 			option.setName("player-mention")
 				.setDescription("Mention the player to remove from the clan")),
 
-	async execute(...args) {
-
-		const interaction = args[0];
-		const client = args[1];
+	async execute(interaction) {
 
 		// Stop if not mod
-		if (!interaction.member.permissions.has(Permissions.FLAGS.MANAGE_CHANNELS)) {
-			await interaction.reply({ content: "You do not have permission to modify clan.", ephemeral: true });
+		if (!interaction.member.permissions.has(PermissionsBitField.Flags.ManageChannels)) {
+			await interaction.reply({ content: "You do not have permission to modify clan.", flags: MessageFlags.Ephemeral });
 			return;
 		}
 
@@ -31,7 +27,7 @@ module.exports = {
 		if (!playerToRemove) {
 			playerToRemove = interaction.options.getString("player");
 			if (!playerToRemove) {
-				await interaction.reply({ content: "You did not set a player!", ephemeral: true });
+				await interaction.reply({ content: "You did not set a player!", flags: MessageFlags.Ephemeral });
 				return;
 			}
 		}
@@ -40,10 +36,16 @@ module.exports = {
 		}
 
 		// Setting clan guildId
-		const guildId = interaction.guildId;
+		const { clanId, clanData } = await getClanIdAndData(interaction);
+		if (!clanId || !clanData) {
+			await interaction.reply({ content: "Clan does not exist or is not accessible! Please create a clan first or try a different channel.", flags: MessageFlags.Ephemeral });
+			return;
+		}
 
-		// Updating
-		// const player = await clanSchema.findOne({ "clanId": guildId, $or: [ { "players.IGN": playerToRemove }, { "players.userId": playerToRemove } ] });
+		if (clanData.cbActive) {
+			await interaction.reply({ content: "You cannot remove players while a CB is active!", flags: MessageFlags.Ephemeral });
+			return;
+		}
 
 		// Find player
 		const player = await clanSchema.aggregate([
@@ -51,7 +53,7 @@ module.exports = {
 				$match: {
 					$and: [
 						{
-							"clanId": guildId,
+							"_id": clanId,
 						},
 						{
 							$or: [
@@ -90,14 +92,26 @@ module.exports = {
 
 		// Check if player exists
 		if (player.length <= 0) {
-			await interaction.reply({ content: "Player is not in clan!", ephemeral: true });
+			await interaction.reply({ content: "Player is not in clan!", flags: MessageFlags.Ephemeral });
 			return;
 		}
 		const { IGN, userId, nbAcc } = player[0];
 		const nbAccToRemove = -nbAcc;
 
-		await clanSchema.updateOne({ "clanId": guildId }, { $inc: { "nbAcc": nbAccToRemove }, $pull: { "players": { "IGN": IGN, "userId": userId } } });
-		await updatePlayers(guildId);
+		await clanSchema.findByIdAndUpdate(
+			clanId,
+			{
+				$inc: { "nbAcc": nbAccToRemove },
+				$pull: {
+					"players": {
+						"IGN": IGN,
+						"userId": userId,
+					},
+				},
+			},
+		);
 		await interaction.reply({ content: `Removed ${playerToRemove} from clan.` });
+		// Clear cache for this clan after removing a player
+		await clearPlayersCache(clanId);
 	},
 };

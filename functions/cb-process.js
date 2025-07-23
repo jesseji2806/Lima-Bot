@@ -1,19 +1,21 @@
-const mongoose = require("mongoose");
+const { MessageFlags, ComponentType } = require("discord.js");
 const { clanSchema } = require("../schemas/cb-clan");
 const cbQueue = require("../schemas/cb-queue");
-const { idToIGN, hitsToPrint, cbAddHit, cbRemoveHit, cbKillBoss, isPlayer } = require("../database/database");
-const { createEmbed, AddRow, BossRow, RemoveRow, LinkRow } = require("../functions/cb-button");
-const moment = require("moment");
+const { idToIGN, hitsToPrint, cbAddHit, cbRemoveHit, isPlayer, getClanId } = require("../database/database");
+const { AddHitReturnValues, RemoveHitReturnValues } = require("../database/retval");
+const { createEmbed, AddRow, RemoveRow } = require("../functions/cb-button");
+const dayjs = require("dayjs");
+const utc = require("dayjs/plugin/utc");
+dayjs.extend(utc);
 
 class cbCollector {
 	constructor(channel, message, logs, coordination, cbData) {
-		this.collector = channel.createMessageComponentCollector({ componentType: "BUTTON" });
+		this.collector = message.createMessageComponentCollector({ componentType: ComponentType.Button });
 		this.channel = channel;
 		this.message = message;
 		this.logs = logs;
 		this.coordination = coordination;
 		this.cbData = cbData;
-
 	}
 	async stop() {
 		await this.collector.stop("cb stopped");
@@ -23,79 +25,80 @@ class cbCollector {
 		await this.cbData.ownerDocument().save();
 	}
 
-	async updateData(guildId) {
-		const clanData = await clanSchema.findOne({ "clanId": guildId });
+	async updateData(clanId) {
+		const clanData = await clanSchema.findById(clanId);
 		this.cbData = clanData.CBs.find(cb => cb.cbId === this.cbData.cbId);
 	}
 }
 
 const collectors = {};
+let trackerInterval = null;
 
-function collectorFunc(i, type, collector, playerHit, nbHits) {
+async function collectorFunc(i, type, collector, playerHit, nbHits) {
 	const { cbData, logs } = collector;
 	const { cbId, day } = cbData;
+	const { _id: clanId } = cbData.ownerDocument();
 	if (type === "add") {
-		cbAddHit(cbData, day, playerHit, nbHits, async function(retval, completed = false) {
-			if (Number.isInteger(retval)) {
-				// format hits for printing
-				const printPlayer = idToIGN(playerHit, i.guildId);
-				const printHits = hitsToPrint(nbHits);
-				const printRet = hitsToPrint(retval);
+		const retval = await cbAddHit(cbData, day, playerHit, nbHits);
+		if (retval.status === AddHitReturnValues.ALREADY_COMPLETED) {
+			await i.editReply({ content: `Player has already hit all hits for day ${day}.` });
+			return;
+		}
+		else if (retval.status === AddHitReturnValues.INVALID_AMOUNT) {
+			await i.editReply({ content: "You are trying to add too many hits at once." });
+			return;
+		}
+		else if ("hitsDone" in retval) {
+			// format hits for printing
+			const printPlayer = await idToIGN(playerHit, clanId);
+			console.log(`Adding ${nbHits} hits to player ${playerHit} on day ${day}.`);
+			const printHits = hitsToPrint(nbHits);
+			const printRet = hitsToPrint(retval.hitsDone);
 
-				// send reply
-				await i.editReply({ content: `Added ${printHits} to ${printPlayer} on day ${day}.\nYou have ${printRet} on day ${day}.` });
+			// send reply
+			await i.editReply({ content: `Added ${printHits} to ${printPlayer} on day ${day}.\nYou have ${printRet} on day ${day}.` });
 
-				// logging
-				await logs.send({ "content": `(CB${cbId}) ${i.user.tag} added ${printHits} to ${printPlayer} on day ${day}. Total: ${printRet}` });
+			// logging
+			await logs.send({ "content": `(CB${cbId}) ${i.user.tag} added ${printHits} to ${printPlayer} on day ${day}. Total: ${printRet}` });
 
-				// additional log message if all hits completed
-				if (completed) {
-					await logs.send({ "content": `(CB${cbId}) ${printPlayer} has completed all ${printRet} on day ${day}! Good work!` });
-				}
-				return;
+			// additional log message if all hits completed
+			if (retval.status === AddHitReturnValues.COMPLETE) {
+				await logs.send({ "content": `(CB${cbId}) ${printPlayer} has completed all ${printRet} on day ${day}! Good work!` });
 			}
-			else if (retval === "All hits done") {
-				await i.editReply({ content: `Player has already hit all hits for day ${day}.` });
-				return;
-			}
-			else if (retval === "Too many hits") {
-				await i.editReply({ content: "You are trying to add too many hits at once." });
-				return;
-			}
-			else {
-				await i.editReply({ content: "An error has occured while adding hit." });
-				return;
-			}
-		});
+			return;
+		}
+		else {
+			await i.editReply({ content: "An error has occured while adding hit." });
+			return;
+		}
 	}
 	else if (type === "remove") {
-		cbRemoveHit(cbData, day, playerHit, nbHits, async function(retval) {
-			if (Number.isInteger(retval)) {
-				// format hits for printing
-				const printPlayer = idToIGN(playerHit, i.guildId);
-				const printHits = hitsToPrint(nbHits);
-				const printRet = hitsToPrint(retval);
+		const retval = await cbRemoveHit(cbData, day, playerHit, nbHits);
+		if (retval.status === RemoveHitReturnValues.NO_HITS) {
+			await i.editReply({ content: `Player has no hits on day ${day}.` });
+			return;
+		}
+		else if (retval.status === RemoveHitReturnValues.INVALID_AMOUNT) {
+			await i.editReply({ content: "You are trying to remove too many hits at once." });
+			return;
+		}
+		else if (retval.status === RemoveHitReturnValues.SUCCESS) {
+			// format hits for printing
+			const printPlayer = await idToIGN(playerHit, clanId);
+			const printHits = hitsToPrint(nbHits);
+			const printRet = hitsToPrint(retval.hitsDone);
 
-				// send reply
-				await i.editReply({ content: `Removed ${printHits} from ${printPlayer} on day ${day}.\nYou have ${printRet} on day ${day}.` });
+			// send reply
+			await i.editReply({ content: `Removed ${printHits} from ${printPlayer} on day ${day}.\nYou have ${printRet} on day ${day}.` });
 
-				// logging
-				await logs.send({ "content": `(CB${cbId}) ${i.user.tag} removed ${printHits} from ${printPlayer} on day ${day}. Total: ${printRet}` });
-				return;
-			}
-			else if (retval === "No hits to remove") {
-				await i.editReply({ content: `Player has no hits on day ${day}.` });
-				return;
-			}
-			else if (retval === "Too many hits") {
-				await i.editReply({ content: "You are trying to remove too many hits at once." });
-				return;
-			}
-			else {
-				await i.editReply({ content: "An error has occured while removing hit." });
-				return;
-			}
-		});
+			// logging
+			await logs.send({ "content": `(CB${cbId}) ${i.user.tag} removed ${printHits} from ${printPlayer} on day ${day}. Total: ${printRet}` });
+			return;
+		}
+		else {
+			await i.editReply({ content: "An error has occured while removing hit." });
+			return;
+		}
 	}
 }
 
@@ -106,11 +109,10 @@ async function setCollector(newCollector) {
 	collector.on("collect", async function(i) {
 		const playerHit = i.user.id;
 		const { cbData } = newCollector;
-		const cbId = cbData.cbId;
-		const cbDay = cbData.day;
+		const { day: cbDay, _id: clanId } = cbData;
 
-		await i.deferReply({ ephemeral: true });
-		if (!isPlayer(i.user.id, i.guildId) && i.customId !== "boss-killed" && i.customId !== "undo-boss-kill") {
+		await i.deferReply({ flags: MessageFlags.Ephemeral });
+		if (await !isPlayer(i.user.id, clanId) && i.customId !== "boss-killed" && i.customId !== "undo-boss-kill") {
 			await i.editReply({ content: "You are not participating in this CB!" });
 			return;
 		}
@@ -138,80 +140,6 @@ async function setCollector(newCollector) {
 			const hitsToRemove = player.hits[cbDay - 1].hitsDone;
 			collectorFunc(i, "remove", newCollector, playerHit, hitsToRemove);
 		}
-		// killing boss
-		else if (i.customId === "boss-killed") {
-			const toPing = await cbKillBoss(cbData, true);
-			await i.editReply("Boss Kill registered. Good work!");
-			// updating message
-			// getting status and queue data
-			const queueData = await cbQueue.findOne({ "cbId": cbId });
-			const { lap, boss, bossIds } = cbData;
-			const { date } = queueData;
-
-			// update collector
-			newCollector.boss = boss;
-
-			// create an embed based on the cbId and the cnDday
-			const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
-
-			// edit the embed
-			await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(i.guildId, cbId)] });
-
-			// logging
-			await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} killed a boss. Moving to Lap ${lap}, Boss ${boss}. ` });
-
-			// pinging
-			if (toPing.length > 0) {
-				let coordPing = `Pinging players who wish to hit boss ${boss}:\n`;
-				for (const user of toPing) {
-					if (user) {
-						coordPing += `> <@${user}>\n`;
-					}
-				}
-				coordPing += `**Boss ${boss} is up!**`;
-				await newCollector.coordination.send({ "content": coordPing });
-			}
-		}
-		else if (i.customId === "undo-boss-kill") {
-			const toPing = await cbKillBoss(cbData, false);
-			if (toPing === "Cannot remove") {
-				await i.editReply("Cannot undo boss kill");
-				return;
-			}
-			else {
-				await i.editReply("Undid boss kill.");
-				// updating message
-				// getting status and queue data
-
-				const queueData = await cbQueue.findOne({ "cbId": cbId });
-				const { lap, boss, bossIds } = cbData;
-				const { date } = queueData;
-
-				// update collector
-				newCollector.boss = boss;
-
-				// create an embed based on the cbId and the cnDday
-				const embed = createEmbed(cbId, cbDay, moment(date).unix(), lap, boss, bossIds);
-
-				// edit the embed
-				await newCollector.message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(i.guildId, cbId)] });
-
-				// logging
-				await newCollector.logs.send({ "content": `(CB${cbId}) ${i.user.tag} undid a boss kill. Returning to Lap ${lap}, Boss ${boss}. ` });
-
-				// pinging
-				if (toPing.length > 0) {
-					let coordPing = `Pinging players who wish to hit boss ${boss}:\n`;
-					for (const user of toPing) {
-						if (user) {
-							coordPing += `> <@${user}>\n`;
-						}
-					}
-					coordPing += `**Boss ${boss} is up!**`;
-					await newCollector.coordination.send({ "content": coordPing });
-				}
-			}
-		}
 	});
 
 	collector.on("end", (collected, reason) => {
@@ -220,121 +148,152 @@ async function setCollector(newCollector) {
 	});
 }
 
-// tracker(client) checks for updates in the queue and updates accordingly
-function tracker(client) {
-	// recursive function for checking past queue
+// tracker() checks for updates in the queue and updates accordingly
+function tracker() {
+	// Prevent multiple trackers
+	if (trackerInterval) {
+		console.log("Tracker already running, restarting tracker.");
+		stopTracker();
+	}
+
 	const checkForUpdate = async function() {
+		try {
+			// check if query is empty
+			if (await cbQueue.estimatedDocumentCount() === 0) {
+				console.log("Queue empty. Stopping tracker");
+				clearInterval(trackerInterval);
+				trackerInterval = null;
+				return;
+			}
 
-		// check if query is empty
-		if (await cbQueue.estimatedDocumentCount() === 0) {
-			console.log("Queue empty. Terminating tracker");
-			return;
+			// query for documents that have a time earlier than set
+			const query = {
+				date: {
+					$lte: dayjs.utc(),
+				},
+			};
+
+			// all documents that have a past time
+			const results = await cbQueue.find(query);
+
+			for (const post of results) {
+				console.log("Starting collector");
+				const { date, cbId, day, channelId, messageId, logsId, coordinationId, clanId } = post;
+
+				let newDate = dayjs.utc();
+				// update queue
+				if (day < 4) {
+					// if not yet last day, add a new doc to the queue for the next day
+					console.log("Starting full day");
+					newDate = dayjs.utc(date).add(1, "d");
+					await new cbQueue({
+						date: newDate,
+						cbId: cbId,
+						day: (day + 1),
+						channelId: channelId,
+						messageId: messageId,
+						logsId: logsId,
+						coordinationId: coordinationId,
+						clanId: clanId,
+					}).save();
+					console.log("Added to queue");
+				}
+				else if (day === 4) {
+					// if last day, add a new doc to the queue for the last day that ends earlier
+					console.log("Starting last day");
+					newDate = dayjs.utc(date).add(1, "d").hour(15);
+					await new cbQueue({
+						date: newDate,
+						cbId: cbId,
+						day: (day + 1),
+						channelId: channelId,
+						messageId: messageId,
+						logsId: logsId,
+						coordinationId: coordinationId,
+						clanId: clanId,
+					}).save();
+				}
+				// update collector
+				await collectors[clanId].updateCollector();
+
+				// update message
+				// retrieve data from embedded document
+				const { lap, boss, bossIds } = collectors[clanId].cbData;
+
+				// create an embed based on the cbId and the cbDay
+				const embed = createEmbed(cbId, day + 1, newDate.unix(), lap, boss, bossIds);
+
+				// retrieve the message object
+				const message = collectors[clanId].message;
+
+				if (day === 5) {
+					// end of last day; CB ends
+					console.log("Ending CB");
+
+					// set CB to inactive
+					const clanData = collectors[clanId].cbData.ownerDocument();
+					clanData.cbActive = false;
+					clanData.save();
+
+					// stop collector
+					collectors[clanId].stop();
+					delete collectors[clanId];
+
+					// edit the embed with empty components
+					await message.edit({ embeds: [embed], components: [] });
+				}
+				else {
+					// edit the embed
+					await message.edit({ embeds: [embed], components: [AddRow, RemoveRow] });
+				}
+			}
+
+			// delete query of past day(s)
+			await cbQueue.deleteMany(query);
+
 		}
-		// query for documents that have a time earlier than set
-		const query = {
-			date: {
-				$lte: moment(),
-			},
-		};
-
-		// all documents that have a past time
-		const results = await cbQueue.find(query);
-
-		for (const post of results) {
-			console.log("Starting collector");
-			const { date, cbId, day, channelId, messageId, logsId, coordinationId, clanId } = post;
-
-			let newDate = moment();
-			// update queue
-			if (day < 4) {
-				// if not yet last day, add a new doc to the queue for the next day
-				console.log("Starting full day");
-				newDate = moment(date).add(1, "d");
-				await new cbQueue({
-					date: newDate,
-					cbId: cbId,
-					day: (day + 1),
-					channelId: channelId,
-					messageId: messageId,
-					logsId: logsId,
-					coordinationId: coordinationId,
-					clanId: clanId,
-				}).save();
-				console.log("Added to queue");
-			}
-			else if (day === 4) {
-				// if last day, add a new doc to the queue for the last day that ends earlier
-				console.log("Starting last day");
-				newDate = moment(date).utc().add(1, "d").hour(8);
-				await new cbQueue({
-					date: newDate,
-					cbId: cbId,
-					day: (day + 1),
-					channelId: channelId,
-					messageId: messageId,
-					logsId: logsId,
-					coordinationId: coordinationId,
-					clanId: clanId,
-				}).save();
-			}
-			// update collector
-			await collectors[clanId].updateCollector();
-
-			// update message
-			// retrieve data from embedded document
-			const { lap, boss, bossIds } = collectors[clanId].cbData;
-
-			// create an embed based on the cbId and the cbDay
-			const embed = createEmbed(cbId, day + 1, newDate.unix(), lap, boss, bossIds);
-
-			// retrieve the message object
-			const message = collectors[clanId].message;
-
-			if (day === 5) {
-				// end of last day; CB ends
-				console.log("Ending CB");
-
-				// set CB to inactive
-				const clanData = collectors[clanId].cbData.ownerDocument();
-				clanData.cbActive = false;
-				clanData.save();
-
-				// stop collector
-				collectors[clanId].stop();
-				delete collectors[clanId];
-
-				// edit the embed with empty components
-				await message.edit({ embeds: [embed], components: [] });
-			}
-			else {
-				// edit the embed
-				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(clanId, cbId)] });
-			}
+		catch (error) {
+			console.error("Error in tracker:", error);
 		}
-
-		// delete query of past day(s)
-		await cbQueue.deleteMany(query);
-
-		// recursively call the function to continue
-		setTimeout(checkForUpdate, 1000 * 60);
 	};
-	// start
+
+	// Run immediately, then every minute
 	checkForUpdate();
+	trackerInterval = setInterval(checkForUpdate, 1000 * 60);
+}
+
+// Add a function to stop the tracker
+function stopTracker() {
+	if (trackerInterval) {
+		clearInterval(trackerInterval);
+		trackerInterval = null;
+		console.log("Tracker stopped");
+	}
 }
 
 module.exports = {
 
 	/**
 	 * Updates the data in the CB process
-	 * @param {string} guildId
+	 * @param {string} clanId
 	 */
-	updateProcess: async function(guildId) {
-		if (collectors[guildId]) {
-			await collectors[guildId].updateData(guildId);
+	updateProcess: async function(clanId) {
+		if (clanId && collectors[clanId]) {
+			await collectors[clanId].updateData(clanId);
 		}
 	},
 
+	/**
+	 * Stops the tracker interval
+	 */
+	stopTracker: function() {
+		stopTracker();
+	},
+
 	restartProcess: async function(client) {
+		// Stop any existing tracker first
+		stopTracker();
+
 		// query for documents that have an active CB
 		const query = {
 			day: {
@@ -366,12 +325,12 @@ module.exports = {
 			const logs = await client.channels.cache.get(logsId);
 
 			// get coordination channel
-			const coordination = await client.channels.cache.get(coordinationId);
+			const coordination = coordinationId ? await client.channels.cache.get(coordinationId) : null;
 
 			// update message
 
 			// get boss data
-			const clanData = await clanSchema.findOne({ "clanId": clanId });
+			const clanData = await clanSchema.findById(clanId);
 			const status = clanData.CBs.find(cb => cb.cbId === cbId);
 			if (status === undefined) {
 				continue;
@@ -380,49 +339,49 @@ module.exports = {
 			const { lap, boss, bossIds } = status;
 			// create an embed based on the cbId, the cbDay as well as the date
 
-			const embed = createEmbed(cbId, day, moment(date).unix(), lap, boss, bossIds);
+			const embed = createEmbed(cbId, day, dayjs(date).unix(), lap, boss, bossIds);
 			// edit the embed
 			if (day === 0) {
-				await message.edit({ embeds: [embed], components: [LinkRow(clanId, cbId)] });
+				await message.edit({ embeds: [embed] });
 			}
 			else {
-				await message.edit({ embeds: [embed], components: [AddRow, BossRow, RemoveRow, LinkRow(clanId, cbId)] });
+				await message.edit({ embeds: [embed], components: [AddRow, RemoveRow] });
 			}
 			// create a new collector
-			collectors[clanId] = new cbCollector(channel, message, logs, coordination, status);
-			setCollector(collectors[clanId]);
+			collectors[clanData._id] = new cbCollector(channel, message, logs, coordination, status);
+			setCollector(collectors[clanData._id]);
 		}
 		// start tracker
-		tracker(client);
+		tracker();
 	},
 
-	startProcess: async function(interaction, cbNumber, startDate, client) {
-		const guildId = interaction.guildId;
+	startProcess: async function(interaction, cbNumber, startDate) {
+		const clanId = await getClanId(interaction);
 
 		// get cb channels
 		const logs = interaction.options.getChannel("logs");
-		const coordination = interaction.options.getChannel("coordination");
+		const coordination = null;
 		const channel = interaction.options.getChannel("destination");
 
 		// create an embed based on the cbId, the cbDay as well as the date
 		const embed = createEmbed(cbNumber, 0, startDate.unix());
-		const message = await channel.send({ embeds: [embed], components: [LinkRow(guildId, cbNumber)] });
+		const message = await channel.send({ embeds: [embed], withResponse: true });
 
 		// retrieve cb data
-		const clanData = await clanSchema.findOne({ "clanId": guildId });
+		const clanData = await clanSchema.findById(clanId);
 		const cbData = clanData.CBs.find(cb => cb.cbId === cbNumber);
 
 		console.log("Starting CB for: ");
-		console.log(startDate);
+		console.log(startDate.format("DD-MM-YYYY"));
 		// create collector
 		// check if collector already exists
 		console.log("Starting collector");
-		if (collectors[guildId]) {
-			await collectors[guildId].stop();
+		if (collectors[clanData._id]) {
+			await collectors[clanData._id].stop();
 		}
 		// create a new collector
-		collectors[guildId] = new cbCollector(channel, message, logs, coordination, cbData);
-		setCollector(collectors[guildId]);
+		collectors[clanData._id] = new cbCollector(channel, message, logs, coordination, cbData);
+		setCollector(collectors[clanData._id]);
 
 		// start day 0 queue
 		await new cbQueue({
@@ -431,11 +390,11 @@ module.exports = {
 			channelId: channel.id,
 			messageId: message.id,
 			logsId: logs.id,
-			coordinationId: coordination.id,
-			clanId: guildId,
+			coordinationId: null,
+			clanId: clanData._id,
 		}).save();
 
 		// start tracker
-		tracker(client);
+		tracker();
 	},
 };

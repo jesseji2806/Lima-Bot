@@ -1,67 +1,42 @@
-const { MessageActionRow, MessageButton, MessageEmbed } = require("discord.js");
-const frontend = process.env.FRONTEND;
+const { ActionRowBuilder, ButtonBuilder, EmbedBuilder, ButtonStyle } = require("discord.js");
 
 module.exports = {
-	AddRow: new MessageActionRow()
+	AddRow: new ActionRowBuilder()
 		.addComponents(
-			new MessageButton()
+			new ButtonBuilder()
 				.setCustomId("add-hit-1")
 				.setLabel("Add 1 Hit")
-				.setStyle("PRIMARY"),
-			new MessageButton()
+				.setStyle(ButtonStyle.Primary),
+			new ButtonBuilder()
 				.setCustomId("add-hit-2")
 				.setLabel("Add 2 Hits")
-				.setStyle("PRIMARY"),
-			new MessageButton()
+				.setStyle(ButtonStyle.Primary),
+			new ButtonBuilder()
 				.setCustomId("add-hit-all")
 				.setLabel("Add All Hits")
-				.setStyle("PRIMARY"),
+				.setStyle(ButtonStyle.Primary),
 		),
-	BossRow: new MessageActionRow()
+	RemoveRow: new ActionRowBuilder()
 		.addComponents(
-			new MessageButton()
-				.setCustomId("boss-killed")
-				.setLabel("Boss Killed")
-				.setStyle("SUCCESS"),
-			new MessageButton()
-				.setCustomId("undo-boss-kill")
-				.setLabel("Undo Boss Kill")
-				.setStyle("DANGER"),
-		),
-	RemoveRow: new MessageActionRow()
-		.addComponents(
-			new MessageButton()
+			new ButtonBuilder()
 				.setCustomId("remove-hit-1")
 				.setLabel("Remove 1 Hit")
-				.setStyle("DANGER"),
-			new MessageButton()
+				.setStyle(ButtonStyle.Danger),
+			new ButtonBuilder()
 				.setCustomId("remove-hit-2")
 				.setLabel("Remove 2 Hits")
-				.setStyle("DANGER"),
-			new MessageButton()
+				.setStyle(ButtonStyle.Danger),
+			new ButtonBuilder()
 				.setCustomId("remove-hit-all")
 				.setLabel("Remove All Hits")
-				.setStyle("DANGER"),
+				.setStyle(ButtonStyle.Danger),
 		),
-	LinkRow: (guildId, cbId) => {
-		const row = new MessageActionRow()
-			.addComponents(
-				new MessageButton()
-					.setLabel("Hit List")
-					.setStyle("LINK")
-					.setURL(frontend + `${guildId}/hitlist/${cbId}`),
-				new MessageButton()
-					.setLabel("Auto Teams")
-					.setStyle("LINK")
-					.setURL(`https://s3-us-west-2.amazonaws.com/holatuwol/priconne/cb${cbId}.html`));
-		return row;
-	},
 
 	createEmbed: function(cbId, cbDay, ...args) {
 		if (cbDay === 0) {
 			const date = args[0];
 			console.log(date);
-			const embed = new MessageEmbed()
+			const embed = new EmbedBuilder()
 				.setColor("#0099ff")
 				.setTitle(`CB ${cbId}`)
 				.setDescription(`CB planned for <t:${date}:F> <t:${date}:R>.`);
@@ -69,35 +44,16 @@ module.exports = {
 		}
 		else if (cbDay <= 5) {
 			const date = args[0];
-			const lap = args[1];
-			const boss = args[2];
-			const bossIds = args[3];
-			let tier = "";
-			if (lap <= 3) {
-				tier = "A";
-			}
-			else if (lap <= 10) {
-				tier = "B";
-			}
-			else if (lap <= 34) {
-				tier = "C";
-			}
-			else {
-				tier = "D";
-			}
 
-			const embed = new MessageEmbed()
+			const embed = new EmbedBuilder()
 				.setColor("#0099ff")
-				.setTitle(`CB ${cbId}, Boss ${tier}${boss}`)
+				.setTitle(`CB ${cbId}`)
 				.setDescription(`Hit registration for day ${cbDay} of CB${cbId}.\n
-                                            Day ends at <t:${date}:F> <t:${date}:R>.\n
-                                            Currently on Lap ${lap}, Boss ${boss}.\n
-                                            Attacking ${tier}${boss}.`)
-				.setThumbnail("https://pricalc.b-cdn.net/jp/unit/extract/latest/icon_unit_" + bossIds[boss - 1] + ".png");
+                                            Day ends at <t:${date}:F> <t:${date}:R>.`);
 			return embed;
 		}
 		else {
-			const embed = new MessageEmbed()
+			const embed = new EmbedBuilder()
 				.setColor("#0099ff")
 				.setTitle(`CB ${cbId}`)
 				.setDescription("CB has ended.");

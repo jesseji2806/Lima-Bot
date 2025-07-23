@@ -1,10 +1,12 @@
+const { Events } = require("discord.js");
 const mongoose = require("mongoose");
 require("dotenv").config();
 const Database = process.env.DATABASE;
 const { restartProcess } = require("../functions/cb-process");
+const { preloadAllPlayersCache } = require("../database/database");
 
 module.exports = {
-	name: "ready",
+	name: Events.ClientReady,
 	once: true,
 
 	execute(client) {
@@ -12,11 +14,10 @@ module.exports = {
 		client.user.setActivity("Clan Battle", { type: "PLAYING" });
 
 		if (!Database) return;
-		mongoose.connect(Database, {
-			useNewUrlParser: true,
-			useUnifiedTopology: true,
-		}).then(() => {
+		mongoose.connect(Database).then(() => {
 			console.log("The client is now connected to the database");
+			// Preload all players cache
+			preloadAllPlayersCache();
 			restartProcess(client);
 		}).catch((err) => {
 			console.log(err);
