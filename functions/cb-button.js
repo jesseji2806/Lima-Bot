@@ -1,5 +1,5 @@
-const { MessageActionRow, MessageButton, MessageEmbed, Message } = require('discord.js');
-const moment = require("moment");
+const { MessageActionRow, MessageButton, MessageEmbed } = require("discord.js");
+const frontend = process.env.FRONTEND;
 
 module.exports = {
 	AddRow: new MessageActionRow()
@@ -43,28 +43,22 @@ module.exports = {
 				.setLabel("Remove All Hits")
 				.setStyle("DANGER"),
 		),
-	LinkRow: (cbId) => {
+	LinkRow: (guildId, cbId) => {
 		const row = new MessageActionRow()
 			.addComponents(
 				new MessageButton()
 					.setLabel("Hit List")
 					.setStyle("LINK")
-					.setURL(`https://aquarium-hitlist.herokuapp.com/hitlist/${cbId}`),
+					.setURL(frontend + `${guildId}/hitlist/${cbId}`),
 				new MessageButton()
 					.setLabel("Auto Teams")
 					.setStyle("LINK")
 					.setURL(`https://s3-us-west-2.amazonaws.com/holatuwol/priconne/cb${cbId}.html`));
 		return row;
 	},
-	PingKoishiRow: new MessageActionRow()
-		.addComponents(
-			new MessageButton()
-				.setCustomId("ping-koishi")
-				.setLabel("Ping Koishi")
-				.setStyle("PRIMARY")),
 
-	createEmbed: function (cbId, cbDay, ...args) {
-		if (cbDay == 0) {
+	createEmbed: function(cbId, cbDay, ...args) {
+		if (cbDay === 0) {
 			const date = args[0];
 			console.log(date);
 			const embed = new MessageEmbed()
@@ -72,7 +66,8 @@ module.exports = {
 				.setTitle(`CB ${cbId}`)
 				.setDescription(`CB planned for <t:${date}:F> <t:${date}:R>.`);
 			return embed;
-		} else if (cbDay <= 5) {
+		}
+		else if (cbDay <= 5) {
 			const date = args[0];
 			const lap = args[1];
 			const boss = args[2];
@@ -80,11 +75,16 @@ module.exports = {
 			let tier = "";
 			if (lap <= 3) {
 				tier = "A";
-			} else if (lap <= 10) {
+			}
+			else if (lap <= 10) {
 				tier = "B";
-			} else {
-				tier = "C"
-			};
+			}
+			else if (lap <= 34) {
+				tier = "C";
+			}
+			else {
+				tier = "D";
+			}
 
 			const embed = new MessageEmbed()
 				.setColor("#0099ff")
@@ -93,14 +93,15 @@ module.exports = {
                                             Day ends at <t:${date}:F> <t:${date}:R>.\n
                                             Currently on Lap ${lap}, Boss ${boss}.\n
                                             Attacking ${tier}${boss}.`)
-				.setThumbnail("https://pricalc.b-cdn.net/jp/unit/extract/latest/icon_unit_" + bossIds[boss-1] + ".png");
+				.setThumbnail("https://pricalc.b-cdn.net/jp/unit/extract/latest/icon_unit_" + bossIds[boss - 1] + ".png");
 			return embed;
-		} else {
+		}
+		else {
 			const embed = new MessageEmbed()
 				.setColor("#0099ff")
 				.setTitle(`CB ${cbId}`)
 				.setDescription("CB has ended.");
 			return embed;
-		}  
-	}, 
-}
+		}
+	},
+};

@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require("@discordjs/builders");
-const cbSchema = require("../schemas/cb-schema");
+const { clanSchema } = require("../schemas/cb-clan");
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -9,20 +9,35 @@ module.exports = {
 	async execute(...args) {
 
 		const interaction = args[0];
-        
-		const { cbId, day } = await cbSchema.findOne({ IGN: "AquariumStatus" });
+		const guildId = interaction.guildId;
 
-		if (day === 0 || day === 6) {
+		const clanData = await clanSchema.findOne({ "clanId": guildId });
+		if (!clanData) {
+			await interaction.reply({ content: "No clan data was found!", ephemeral: true });
+			return;
+		}
+
+		if (!clanData.cbActive) {
 			await interaction.reply({ content: "CB not currently active!", ephemeral: true });
 			return;
 		}
 
-		let toReply = `Waitlist for day ${day} of CB${cbId}:\n`;
+		// Retrieve data for the CB by finding most recent CB
+		if (clanData.CBs.length <= 0) {
+			await interaction.reply({ content: "No CB data was found!", ephemeral: true });
+			return;
+		}
+		const cbData = clanData.CBs.reduce((p, c) => p.cbId > c.cbId ? p : c);
 
-		for (let i = 1; i <= 5; ++i) {
-			const players = await cbSchema.find({ "cbId": cbId, "day": day, "IGN": { $ne: "AquariumStatus" }, "bossIds": i }, { "_id": 0, "IGN": 1 }, { sort: { "_id": 1 } });
+		let toReply = `Waitlist for day ${cbData.day} of CB${cbData.cbId}:\n`;
+
+		for (let i = 0; i < 5; ++i) {
+			const players = cbData.hitList.filter(cbPlayer => {
+				return cbPlayer.hits[cbData.day - 1].coordinate[i] === true;
+			});
+
 			if (players.length > 0) {
-				toReply += `**Boss ${i}:**\n`;
+				toReply += `**Boss ${i + 1}:**\n`;
 				for (const player of players) {
 					toReply += `> ${player.IGN}\n`;
 				}

@@ -1,9 +1,6 @@
 // This module creates and modifies database documents
-
 const mongoose = require("mongoose");
-const fs = require("node:fs");
-const { kill } = require("node:process");
-const cbSchema = require("../schemas/cb-schema");
+// const fs = require("node:fs");
 const { clanSchema } = require("../schemas/cb-clan");
 
 
@@ -16,249 +13,489 @@ const data = fs.readFileSync("database/Aquarium.json");
 const databases = JSON.parse(data);
 const listPlayers = [{}, {}];
 databases.forEach(function (db) {
-    if (db.IGN !== "Aquarium" && db.IGN !== "AquariumStatus") {
-        listPlayers[0][db.IGN] = db.userId;
-        if (db.userId) {
-            listPlayers[1][db.userId] = db.IGN;
-        }
-    }
+	if (db.IGN !== "Aquarium" && db.IGN !== "AquariumStatus") {
+		listPlayers[0][db.IGN] = db.userId;
+		if (db.userId) {
+			listPlayers[1][db.userId] = db.IGN;
+		}
+	}
 });
 */
 const listPlayers = {};
 clanSchema.find({}, (err, clans) => {
-    if (err) {
-        console.log(err);
-    }
-    else{
-        clans.forEach((clan) => {
-        const clanId = clan.clanId;
-        const playerNames = {
-            "IGNToId": {},
-            "idToIGN": {},
-        };
-        clan.players.forEach((player) => {
-            playerNames.IGNToId[player.IGN] = player.userId;
-            playerNames.idToIGN[player.userId] = player.IGN;
-        });
-        listPlayers[clanId] = playerNames;
-        })
-    }
+	if (err) {
+		console.log(err);
+	}
+	else {
+		clans.forEach((clan) => {
+			const guildId = clan.clanId;
+			const playerNames = {
+				"IGNToId": {},
+				"idToIGN": {},
+			};
+			clan.players.forEach((player) => {
+				playerNames.IGNToId[player.IGN] = player.userId;
+				playerNames.idToIGN[player.userId] = player.IGN;
+			});
+			listPlayers[guildId] = playerNames;
+		});
+	}
 });
+
+async function updatePlayers(guildId) {
+	clanSchema.findOne({ "clanId": guildId }, (err, clan) => {
+		if (err) {
+			console.log(err);
+		}
+		else {
+			const playerNames = {
+				"IGNToId": {},
+				"idToIGN": {},
+			};
+			clan.players.forEach((player) => {
+				playerNames.IGNToId[player.IGN] = player.userId;
+				playerNames.idToIGN[player.userId] = player.IGN;
+			});
+			listPlayers[guildId] = playerNames;
+		}
+	});
+}
 
 /*
 // dict IGN = Discord id
 async function findPlayer(IGN, userId, clanId) {
-    const player = clanSchema.aggregate(
-        [
-            {
-              '$match': {
-                '$and': [
-                  {
-                    '$or': [
-                      {
-                        'players.IGN': IGN
-                      }, {
-                        'players.userId': userId
-                      }
-                    ]
-                  }, {
-                    'clanId': clanId
-                  }
-                ]
-              }
-            }, {
-              '$unwind': {
-                'path': '$players'
-              }
-            }, {
-              '$match': {
-                '$or': [
-                  {
-                    'players.IGN': IGN
-                  }, {
-                    'players.userId': userId
-                  }
-                ]
-              }
-            }
-        ]
-    );
-    return player;
+	const player = clanSchema.aggregate(
+		[
+			{
+			  '$match': {
+				'$and': [
+				  {
+					'$or': [
+					  {
+						'players.IGN': IGN
+					  }, {
+						'players.userId': userId
+					  }
+					]
+				  }, {
+					'clanId': clanId
+				  }
+				]
+			  }
+			}, {
+			  '$unwind': {
+				'path': '$players'
+			  }
+			}, {
+			  '$match': {
+				'$or': [
+				  {
+					'players.IGN': IGN
+				  }, {
+					'players.userId': userId
+				  }
+				]
+			  }
+			}
+		]
+	);
+	return player;
 }
 */
 
 module.exports = {
-    isPlayer: function(player, clanId) {
-        return player in listPlayers[clanId].IGNToId || player in listPlayers[clanId].idToIGN;
-    },
+	/**
+	 * Updates the list of players for a given clan
+	 * @param {String} guildId
+	 */
+	updatePlayers: async function(guildId) {
+		await updatePlayers(guildId);
+	},
 
-    // IGN => Discord id
-    IGNToId: function(IGN, clanId) {
-        return listPlayers[clanId].IGNToId[IGN];
-    },
+	/**
+	 * Checks if player is in the clan list
+	 * @param {String} player
+	 * @param {String} guildId
+	 * @returns {Boolean} true if player in given guildId
+	 */
+	isPlayer: function(player, guildId) {
+		return player in listPlayers[guildId].IGNToId || player in listPlayers[guildId].idToIGN;
+	},
 
-    // Discord id => IGN
-    idToIGN: function(id, clanId) {
-        return listPlayers[clanId].idToIGN[id];
-    },
+	/**
+	 * IGN => Discord id
+	 * @param {String} IGN
+	 * @param {String} guildId
+	 * @returns {String} Discord id of IGN
+	 */
+	IGNToId: function(IGN, guildId) {
+		return listPlayers[guildId].IGNToId[IGN];
+	},
 
-    // Hits number => Printable
-    hitsToPrint: function(nbHits) {
-        let printHits = nbHits.toString();
-        if (nbHits === 1) {
-            printHits += " hit";
-        } else {
-            printHits += " hits";
-        }
-        return printHits;
-    },
+	/**
+	 * Discord id => IGN
+	 * @param {String} id
+	 * @param {String} guildId
+	 * @returns {String} IGN of Discord id
+	 */
+	idToIGN: function(id, guildId) {
+		return listPlayers[guildId].idToIGN[id];
+	},
 
-    // create CB documents
-    createCB: async function(clanId, cbId, bossIds, logs) {
+	// Hits number => Printable
+	hitsToPrint: function(nbHits) {
+		let printHits = nbHits.toString();
+		if (nbHits === 1) {
+			printHits += " hit";
+		}
+		else {
+			printHits += " hits";
+		}
+		return printHits;
+	},
 
-        /* Unused after schema update
-        fs.readFile("database/Aquarium.json", async function (err, data) {
+	// create CB documents
+	createCB: async function(guildId, cbId, bossIds, logs) {
 
-            if (err) {
-                console.log(`Error reading file from disk: ${err}`);
-            } else {
-        
-                // parse JSON string to JSON object
-                const databases = JSON.parse(data);
+		// Find clan data based on clan id
+		const clanData = await clanSchema.findOne({ "clanId": guildId });
 
-                // create CB documents for 5 days
-                databases.forEach(db => {
-                    for (let i = 1; i <= 5; ++i) {
-                        new cbSchema({
-                            cbId: cbId,
-                            day: i,
-                            IGN: db.IGN,
-                            userId: db.userId,
-                            nbAcc: db.nbAcc,
-                            hitsDone: 0,
-                            bossIds: [],
-                            ping: true,    
-                        }).save();
-                    }
-                });
+		const players = clanData.players.filter(player => player.nbAcc > 0);
 
-                // remove previous tracker if it exists
-                await cbSchema.deleteMany({ "IGN": "AquariumStatus" });
-                // set tracker
-                await new cbSchema({
-                    cbId: cbId,
-                    day: 0,
-                    IGN: "AquariumStatus",
-                    nbAcc: 30,
-                    hitsDone: 90,
-                    lap: 1,
-                    boss: 1,
-                    bossIds: bossIds,
-                    logs: logs,
-                }).save();
-            }
-        
-        });
-        */
-        // Find clan data based on clan id
-        const clanData = await clanSchema.findOne({ "clanId": clanId });
+		// Create new CB document to add to the list of CBs in cb-clan
+		const newCb = clanData.CBs.create({
+			"cbId": cbId,
+			"nbAcc": clanData.nbAcc,
+			"bossIds": bossIds,
+			"logs": logs,
+		});
+		clanData.CBs.push(newCb);
 
-        const { players, name } = clanData;
+		const currCb = clanData.CBs.find(cb => cb["_id"] === newCb["_id"]);
+		console.log(currCb instanceof mongoose.Document);
+		// Create document for each player
+		players.forEach(player => {
+			const cbPlayer = currCb.hitList.create({
+				"IGN": player.IGN,
+				"userId": player.userId,
+				"nbAcc": player.nbAcc,
+				"ping": true,
+			});
+			newCb.hitList.push(cbPlayer);
 
-        // Add clan information
-        players.push({
-            IGN: name,
-            nbAcc: players.length
-        });
+			const newPlayer = currCb.hitList.find(p => p["_id"] === cbPlayer["_id"]);
+			for (let i = 1; i <= 5; ++i) {
+				newPlayer.hits.push({
+					"day": i,
+					"hitsDone": 0,
+				});
+			}
+		});
 
-        // Create document for each player
-        players.forEach(player => {
-            for (let i = 1; i <= 5; ++i) {
-                new cbSchema({
-                    cbId: cbId,
-                    day: i,
-                    IGN: player.IGN,
-                    userId: player.userId,
-                    nbAcc: player.nbAcc,
-                    hitsDone: 0,
-                    bossIds: [],
-                    ping: true,    
-                }).save();
-            }
-        });
+		// Set CB to active
+		clanData.cbActive = true;
 
-        //
-        const clanStatus = name + "Status";
+		// Add to list of CBs in cb-clan
+		await clanData.save();
+	},
 
-        // remove previous tracker if it exists
-        await cbSchema.deleteMany({ "IGN": clanStatus });
-        // set tracker
-        await new cbSchema({
-           cbId: cbId,
-           day: 0,
-           IGN: clanStatus,
-           nbAcc: 30,
-           hitsDone: 90,
-           lap: 1,
-           boss: 1,
-           bossIds: bossIds,
-           logs: logs,
-        }).save();
-    },
+	/**
+	 * Add hits to Hit List
+	 * Uses cbData document instead of aggregation
+	 * @param {cbSchema} cbData
+	 * @param {Number} day
+	 * @param {String} userId
+	 * @param {Number} nbHitsToAdd
+	 * @callback callback
+	 */
+	cbAddHit: async function(cbData, day, userId, nbHitsToAdd, callback) {
+		// Find the document corresponding to the right CB, the right day and the right player name
 
-    // add hit to Hit List
-    cbAddHit: async function (hitCbID, hitDay, hitIGN, hitsToAdd, bossId, callback) {
-        // Find the document corresponding to the right CB, the right day and the right player name
-        const doc = await cbSchema.findOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN });
+		const player = cbData.hitList.find(cbPlayer => cbPlayer.userId == userId);
 
-        if (doc.hitsDone >= (doc.nbAcc * 3)) {
-            callback("All hits done");
-        } else if ((doc.hitsDone + hitsToAdd) > (doc.nbAcc * 3)) {
-            callback("Too many hits");
-        } else {
-            await cbSchema.updateOne({ "cbId": hitCbID, "day": hitDay, "IGN": hitIGN}, { $inc: { "hitsDone": hitsToAdd }, $pull: { "bossIds": bossId } });
-            await cbSchema.updateOne({ "cbId": hitCbID, "day": hitDay, "IGN": "Aquarium"}, { $inc: { "hitsDone": hitsToAdd } });
-            console.log(`Added ${hitsToAdd} hit(s) to ${hitIGN}`);
-            callback(doc.hitsDone + hitsToAdd);
-        }
-    },
-    // remove hit from Hit List
-    cbRemoveHit: async function (hitCbID, hitDay, hitIGN, hitsToRemove, callback) {
-        // Find the document corresponding to the right CB, the right day and the right player name
-        const doc = await cbSchema.findOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN });
+		const { hits, nbAcc } = player;
+		const hitsDone = hits[day - 1].hitsDone;
 
-        if (doc.hitsDone === 0) {
-            callback("No hits to remove");
-        } else if ((doc.hitsDone - hitsToRemove) < 0) {
-            callback("Too many hits");
-        } else {
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: hitIGN}, { $inc: { hitsDone: (-1 * hitsToRemove) } });
-            await cbSchema.updateOne({ cbId: hitCbID, day: hitDay, IGN: "Aquarium"}, { $inc: { hitsDone: (-1 * hitsToRemove) } });
-            console.log(`Removed ${hitsToRemove} hit(s) to ${hitIGN}`);
-            callback(doc.hitsDone - hitsToRemove);
-        }
-    },
+		if (hitsDone >= (nbAcc * 3)) {
+			callback("All hits done");
+		}
+		else if ((hitsDone + nbHitsToAdd) > (nbAcc * 3)) {
+			callback("Too many hits");
+		}
+		else {
+			let completed = false;
+			// increment hit counts and save
+			player.hits[day - 1].hitsDone += nbHitsToAdd;
+			player.hits[day - 1].coordinate[cbData.boss - 1] = false;
+			cbData.hitsDone[day - 1] += nbHitsToAdd;
 
-    // kill boss in boss tracker
-    cbKillBoss: async function (killCbId, add) {
-        const doc = await cbSchema.findOne({ "cbId": killCbId, "IGN": "AquariumStatus" });
-        let { lap, boss, day } = doc;
-        if (boss === 5 && add) {
-            boss = 1;
-            ++lap;
-        } else if (add) {
-            ++boss;
-        } else if (lap === 1 && boss === 1 && !add) {
-            return "Cannot remove";
-        } else if (boss === 1 && !add) {
-            --lap;
-            boss = 5;
-        } else if (!add) {
-            --boss;
-        }
-        await cbSchema.updateOne({ cbId: killCbId, "IGN": "AquariumStatus"}, { $set: { lap: lap, boss: boss } });
-        console.log("Killed Boss");
-        const pings = await cbSchema.find({ "cbId": killCbId, "day": day, "IGN": { $ne: "AquariumStatus" }, "bossIds": boss }, { "_id": 0, "userId": 1 }, { sort: { "_id": 1 } });
-        return pings;
-    }
-}
+			// check if all hits are done
+			if (player.hits[day - 1].hitsDone >= (nbAcc * 3)) {
+				player.hits[day - 1].coordinate = Array(5).fill(false);
+				completed = true;
+			}
+			await cbData.ownerDocument().save();
+
+			// log changes
+			console.log(`Added ${nbHitsToAdd} hit(s) to ${userId}`);
+			callback(hitsDone + nbHitsToAdd, completed);
+		}
+	},
+
+	/**
+	 * Add hits to Hit List
+	 * @param {String} clanId
+	 * @param {Number} cbID
+	 * @param {Number} day
+	 * @param {String} userId
+	 * @param {Number} nbHitsToAdd
+	 * @param {String} bossId
+	 * @callback callback
+	 */
+	/**
+	cbAddHit: async function(clanId, cbId, day, userId, nbHitsToAdd, bossId, callback) {
+		// Find the document corresponding to the right CB, the right day and the right player name
+		const player = await clanSchema.aggregate([
+			{
+				$match: {
+					$and: [
+						{
+							"clanId": clanId,
+						},
+						{
+							"CBs.cbId": cbId,
+						},
+						{
+							"CBs.hitList.userId": userId,
+						},
+						{
+							"CBs.hitList.hits.day": day,
+						},
+					],
+				},
+			},
+			{
+				$unwind: "$CBs.hitList.hits",
+			},
+			{
+				$match: {
+					$and: [
+						{
+							"CBs.cbId": cbId,
+						},
+						{
+							"CBs.hitList.userId": userId,
+						},
+						{
+							"CBs.hitList.hits.day": day,
+						},
+					],
+				},
+			},
+			{
+				$replaceRoot: {
+					"newRoot": "$CBs.hitList",
+				},
+			},
+		]);
+
+		const { hits: { hitsDone }, nbAcc } = player[0];
+		if (hitsDone >= (nbAcc * 3)) {
+			callback("All hits done");
+		}
+		else if ((hitsDone + nbHitsToAdd) > (nbAcc * 3)) {
+			callback("Too many hits");
+		}
+		else {
+			await clanSchema.updateOne({
+				"clanId": clanId,
+				"CBs.cbId": cbId,
+				"CBs.hitList.userId": userId,
+				"CBs.hitList.hits.day": day,
+			},
+			{
+				$inc:
+					{
+						"CBs.$[cbId].hitList.$[player].hits.$[day].hitsDone": nbHitsToAdd,
+						"CBs.$[cbId].hitsDone": nbHitsToAdd,
+					},
+				$pull: { "CBs.$[cbId].hitList.$[player].hits.$[day].coordinate": bossId },
+			},
+			{
+				arrayFilters: [
+					{ "cbId": { "CBs.cbId": cbId } },
+					{ "player": { "CBs.hitList.userId": userId } },
+					{ "day": { "CBs.hitList.hits.day": day } },
+				],
+			});
+
+			console.log(`Added ${nbHitsToAdd} hit(s) to ${this.idToIGN(userId)}`);
+			callback(hitsDone + nbHitsToAdd);
+		}
+	},
+	*/
+
+	/**
+	 * Remove hits from Hit List
+	 * Uses cbData document instead of aggregation
+	 * @param {cbSchema} cbData
+	 * @param {Number} day
+	 * @param {String} userId
+	 * @param {Number} nbHitsToRemove
+	 * @callback callback
+	 */
+	cbRemoveHit: async function(cbData, day, userId, nbHitsToRemove, callback) {
+		// Find the document corresponding to the right CB, the right day and the right player name
+		const player = cbData.hitList.find(cbPlayer => cbPlayer.userId == userId);
+
+		const hitsDone = player.hits[day - 1].hitsDone;
+
+		if (hitsDone === 0) {
+			callback("No hits to remove");
+		}
+		else if ((hitsDone - nbHitsToRemove) < 0) {
+			callback("Too many hits");
+		}
+		else {
+			// decrement hit counts and save
+			player.hits[day - 1].hitsDone -= nbHitsToRemove;
+			cbData.hitsDone[day - 1] -= nbHitsToRemove;
+			await cbData.ownerDocument().save();
+
+			// log changes
+			console.log(`Removed ${nbHitsToRemove} hit(s) to ${userId}`);
+			callback(hitsDone - nbHitsToRemove);
+		}
+	},
+
+	/**
+	 * Remove hits from Hit List
+	 * @param {String} clanId
+	 * @param {Number} cbID
+	 * @param {Number} day
+	 * @param {String} userId
+	 * @param {Number} nbHitsToRemove
+	 * @callback callback
+	 */
+	/**
+	cbRemoveHit: async function(clanId, cbId, day, userId, nbHitsToRemove, callback) {
+		// Find the document corresponding to the right CB, the right day and the right player name
+		const player = await clanSchema.aggregate([
+			{
+				$match: {
+					$and: [
+						{
+							"clanId": clanId,
+						},
+						{
+							"CBs.cbId": cbId,
+						},
+						{
+							"CBs.hitList.userId": userId,
+						},
+						{
+							"CBs.hitList.hits.day": day,
+						},
+					],
+				},
+			},
+			{
+				$unwind: "$CBs.hitList.hits",
+			},
+			{
+				$match: {
+					$and: [
+						{
+							"CBs.cbId": cbId,
+						},
+						{
+							"CBs.hitList.userId": userId,
+						},
+						{
+							"CBs.hitList.hits.day": day,
+						},
+					],
+				},
+			},
+			{
+				$replaceRoot: {
+					"newRoot": "$CBs.hitList",
+				},
+			},
+		]);
+
+		const { hits: { hitsDone } } = player[0];
+
+		if (hitsDone === 0) {
+			callback("No hits to remove");
+		}
+		else if ((hitsDone - nbHitsToRemove) < 0) {
+			callback("Too many hits");
+		}
+		else {
+			await clanSchema.updateOne({
+				"clanId": clanId,
+				"CBs.cbId": cbId,
+				"CBs.hitList.userId": userId,
+				"CBs.hitList.hits.day": day,
+			},
+			{
+				$inc:
+					{
+						"CBs.$[cbId].hitList.$[player].hits.$[day].hitsDone": (-1 * nbHitsToRemove),
+						"CBs.$[cbId].hitsDone": (-1 * nbHitsToRemove),
+					},
+			},
+			{
+				arrayFilters: [
+					{ "cbId": { "CBs.cbId": cbId } },
+					{ "player": { "CBs.hitList.userId": userId } },
+					{ "day": { "CBs.hitList.hits.day": day } },
+				],
+			});
+			console.log(`Removed ${nbHitsToRemove} hit(s) to ${this.idToIGN(userId)}`);
+			callback(hitsDone - nbHitsToRemove);
+		}
+	},
+	*/
+
+	/**
+	 * Kill boss in boss tracker
+	 * @param {cbSchema} cbData
+	 * @param {Boolean} add
+	*/
+	cbKillBoss: async function(cbData, add) {
+		const { lap, boss, day } = cbData;
+		if (boss === 5 && add) {
+			cbData.boss = 1;
+			++cbData.lap;
+		}
+		else if (add) {
+			++cbData.boss;
+		}
+		else if (lap === 1 && boss === 1 && !add) {
+			return "Cannot remove";
+		}
+		else if (boss === 1 && !add) {
+			--cbData.lap;
+			cbData.boss = 5;
+		}
+		else if (!add) {
+			--cbData.boss;
+		}
+		// save updates
+		await cbData.ownerDocument().save();
+
+		// log update
+		console.log(`Killed Boss ${boss}`);
+
+		// getting players to ping
+		const pings = [];
+		cbData.hitList.forEach(player => {
+			if (player.hits[day - 1].coordinate[cbData.boss - 1]) {
+				pings.push(player.userId);
+			}
+		});
+		return pings;
+	},
+};
