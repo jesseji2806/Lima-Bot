@@ -104,6 +104,77 @@ npm run deploy:prod
 npm start
 ```
 
+## Docker Deployment (Alternative)
+
+If you prefer using Docker, you can run Lima Bot in a container:
+
+### Prerequisites for Docker
+- [Docker](https://www.docker.com/get-started) installed on your system
+- MongoDB database (cloud or separate container)
+
+### 1. Environment Setup
+Create a `.env` file in the root directory with the same variables as described in step 5 above.
+
+### 2. Build the Docker Image
+```bash
+docker build -t lima-bot .
+```
+
+### 3. Run the Container
+```bash
+docker run -d --name lima-bot --env-file .env lima-bot
+```
+
+### 4. Deploy Commands
+You'll need to deploy commands once. You can do this by running:
+```bash
+# For development
+docker exec lima-bot node deploy-commands.js
+
+# For production
+docker exec lima-bot node deploy-commands.js --prod
+```
+
+### Docker with MongoDB
+If you want to run MongoDB in Docker as well, you can use docker-compose. Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: lima-bot-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+
+  lima-bot:
+    build: .
+    container_name: lima-bot
+    restart: unless-stopped
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URI=mongodb://root:password@mongodb:27017/lima-bot?authSource=admin
+
+volumes:
+  mongodb_data:
+```
+
+Then run:
+```bash
+docker-compose up -d
+```
+
+> **Note**: When using the docker-compose setup, make sure your `.env` file doesn't override the `DATABASE_URI` or update it to match the MongoDB container connection string.
+
 ## Usage
 
 ### Initial Setup
